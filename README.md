@@ -517,6 +517,6 @@ MIT License - 详见 [LICENSE](./LICENSE) 文件
 
 **如果这个项目对你有帮助，请给一个 ⭐️**
 
-0xFannie.eth Made with ❤️ for Web3 Community
+0xfannie.eth Made with ❤️ for Web3 Community
 
 </div>
