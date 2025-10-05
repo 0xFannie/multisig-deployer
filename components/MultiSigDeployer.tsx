@@ -160,7 +160,7 @@ export function MultiSigDeployer() {
   if (!mounted) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-light"></div>
       </div>
     )
   }
@@ -168,44 +168,51 @@ export function MultiSigDeployer() {
   return (
     <>
       {/* Owners Section */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div>
-          <div className="flex justify-between items-center mb-4">
-            <label className="text-white font-medium text-lg">
-              所有者地址 ({owners.filter(o => o.trim()).length})
-            </label>
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <label className="text-white font-semibold text-xl block mb-1">
+                所有者地址
+              </label>
+              <p className="text-primary-gray text-sm">
+                已添加 <span className="text-primary-light font-semibold">{owners.filter(o => o.trim()).length}</span> 个所有者
+              </p>
+            </div>
             <button
               onClick={addOwner}
-              className="flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition"
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary-light/10 text-primary-light rounded-xl hover:bg-primary-light/20 transition-all border border-primary-light/30 font-medium"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" />
               添加地址
             </button>
           </div>
 
           <div className="space-y-3">
             {owners.map((owner, index) => (
-              <div key={index} className="flex gap-2">
-                <input
-                  type="text"
-                  value={owner}
-                  onChange={(e) => updateOwner(index, e.target.value)}
-                  placeholder="0x..."
-                  className="flex-1 px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                />
+              <div key={index} className="flex gap-3">
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    value={owner}
+                    onChange={(e) => updateOwner(index, e.target.value)}
+                    placeholder="0x..."
+                    className="w-full px-5 py-4 bg-primary-dark/50 border border-primary-light/20 rounded-xl text-white placeholder-primary-gray focus:outline-none focus:border-primary-light focus:ring-2 focus:ring-primary-light/20 font-mono text-sm transition-all"
+                  />
+                </div>
                 <button
                   onClick={() => useCurrentAddress(index)}
                   disabled={!isConnected}
-                  className="px-4 py-3 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  className="px-5 py-4 bg-primary-gray/20 text-primary-gray rounded-xl hover:bg-primary-gray/30 hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap font-medium border border-primary-gray/30"
                 >
-                  使用当前地址
+                  使用当前
                 </button>
                 {owners.length > 1 && (
                   <button
                     onClick={() => removeOwner(index)}
-                    className="px-4 py-3 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition"
+                    className="px-4 py-4 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-all border border-red-500/30"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-5 h-5" />
                   </button>
                 )}
               </div>
@@ -215,33 +222,49 @@ export function MultiSigDeployer() {
 
         {/* Required Confirmations */}
         <div>
-          <label className="text-white font-medium text-lg block mb-3">
+          <label className="text-white font-semibold text-xl block mb-4">
             所需确认数
           </label>
-          <input
-            type="number"
-            min="1"
-            max={owners.filter(o => o.trim()).length || 1}
-            value={requiredConfirmations}
-            onChange={(e) => setRequiredConfirmations(parseInt(e.target.value) || 1)}
-            className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <p className="text-blue-300 text-sm mt-2">
-            执行交易需要 {requiredConfirmations} / {owners.filter(o => o.trim()).length} 个所有者确认
+          <div className="relative">
+            <input
+              type="number"
+              min="1"
+              max={owners.filter(o => o.trim()).length || 1}
+              value={requiredConfirmations}
+              onChange={(e) => setRequiredConfirmations(parseInt(e.target.value) || 1)}
+              className="w-full px-5 py-4 bg-primary-dark/50 border border-primary-light/20 rounded-xl text-white focus:outline-none focus:border-primary-light focus:ring-2 focus:ring-primary-light/20 text-lg font-semibold"
+            />
+          </div>
+          <p className="text-primary-gray text-sm mt-3 bg-primary-light/5 px-4 py-2 rounded-lg inline-block">
+            执行交易需要 <span className="text-primary-light font-semibold">{requiredConfirmations}</span> / <span className="text-white font-semibold">{owners.filter(o => o.trim()).length}</span> 个所有者确认
           </p>
         </div>
 
         {/* Info Box */}
-        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-          <div className="flex gap-3">
-            <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-blue-200">
-              <p className="font-medium mb-1">部署说明：</p>
-              <ul className="list-disc list-inside space-y-1 text-blue-300">
-                <li>确保所有所有者地址正确无误</li>
-                <li>部署后无法修改所有者和确认数要求</li>
-                <li>部署需要消耗 Gas 费用</li>
-                <li>建议先在测试网测试</li>
+        <div className="bg-primary-light/5 border border-primary-light/30 rounded-2xl p-6">
+          <div className="flex gap-4">
+            <div className="w-10 h-10 rounded-lg bg-primary-light/20 flex items-center justify-center flex-shrink-0">
+              <AlertCircle className="w-6 h-6 text-primary-light" />
+            </div>
+            <div className="text-sm">
+              <p className="font-semibold mb-3 text-white text-base">部署说明</p>
+              <ul className="space-y-2 text-primary-gray">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-light mt-0.5">•</span>
+                  <span>确保所有所有者地址正确无误</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-light mt-0.5">•</span>
+                  <span>部署后无法修改所有者和确认数要求</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-light mt-0.5">•</span>
+                  <span>部署需要消耗 Gas 费用</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary-light mt-0.5">•</span>
+                  <span>建议先在测试网测试</span>
+                </li>
               </ul>
             </div>
           </div>
@@ -251,42 +274,40 @@ export function MultiSigDeployer() {
         <button
           onClick={deployContract}
           disabled={isDeploying || !isConnected}
-          className="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-semibold text-lg hover:from-blue-600 hover:to-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+          className="w-full py-5 bg-gradient-to-r from-primary-light to-primary-gray text-primary-black rounded-2xl font-bold text-lg hover:shadow-2xl hover:shadow-primary-light/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
         >
+          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
           {isDeploying ? (
             <>
-              <Loader className="w-5 h-5 animate-spin" />
+              <Loader className="w-6 h-6 animate-spin" />
               部署中...
             </>
           ) : (
-            '部署多签钱包'
+            <>
+              <span>部署多签钱包</span>
+              <Plus className="w-5 h-5" />
+            </>
           )}
         </button>
 
         {/* Deployed Address */}
         {deployedAddress && (
-          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-            <div className="flex gap-3">
-              <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+          <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-6">
+            <div className="flex gap-4">
+              <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                <CheckCircle className="w-6 h-6 text-green-400" />
+              </div>
               <div className="flex-1">
-                <p className="text-green-400 font-medium mb-2">部署成功！</p>
-                <p className="text-white font-mono text-sm break-all">
-                  {deployedAddress}
-                </p>
+                <p className="text-green-400 font-semibold mb-3 text-lg">部署成功！</p>
+                <div className="bg-primary-black/50 rounded-lg p-3 border border-green-500/30">
+                  <p className="text-white font-mono text-sm break-all">
+                    {deployedAddress}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         )}
-      </div>
-
-      {/* Footer Note */}
-      <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-        <p className="text-sm text-green-200">
-          ✅ <strong>部署功能已启用</strong>：你现在可以直接在前端部署多签钱包合约。
-        </p>
-        <p className="text-xs text-green-300 mt-2">
-          或者使用命令行: <code className="bg-black/30 px-2 py-1 rounded">npx hardhat run scripts/deploy.js --network localhost</code>
-        </p>
       </div>
     </>
   )

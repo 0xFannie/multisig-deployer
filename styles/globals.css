@@ -1,3 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-poppins bg-primary-black text-white;
+  }
+}
+
+@layer utilities {
+  .glass-effect {
+    background: rgba(120, 126, 145, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(248, 227, 214, 0.1);
+  }
+  
+  .glass-card {
+    background: linear-gradient(135deg, rgba(19, 23, 42, 0.8) 0%, rgba(5, 9, 14, 0.9) 100%);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(248, 227, 214, 0.15);
+  }
+  
+  .gradient-border {
+    position: relative;
+    border-radius: 1rem;
+  }
+  
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 1rem;
+    padding: 2px;
+    background: linear-gradient(135deg, #F8E3D6, #787E91);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+}

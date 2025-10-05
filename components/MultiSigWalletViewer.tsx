@@ -86,35 +86,39 @@ export function MultiSigWalletViewer() {
 
   if (!mounted) {
     return (
-      <div className="bg-white/5 border border-white/20 rounded-lg p-8 text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-        <p className="text-white">加载中...</p>
+      <div className="glass-effect rounded-2xl p-12 text-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-light mx-auto mb-4"></div>
+        <p className="text-primary-gray">加载中...</p>
       </div>
     )
   }
 
   if (!isConnected) {
     return (
-      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-6 text-center">
-        <Wallet className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
-        <p className="text-yellow-200 text-lg">请先连接钱包查看多签钱包信息</p>
+      <div className="bg-primary-light/5 border border-primary-light/30 rounded-2xl p-12 text-center">
+        <div className="w-20 h-20 rounded-2xl bg-primary-light/20 flex items-center justify-center mx-auto mb-6">
+          <Wallet className="w-10 h-10 text-primary-light" />
+        </div>
+        <p className="text-white text-xl font-semibold mb-2">未连接钱包</p>
+        <p className="text-primary-gray">请先连接钱包查看多签钱包信息</p>
       </div>
     )
   }
 
   if (loading) {
     return (
-      <div className="bg-white/5 border border-white/20 rounded-lg p-8 text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-        <p className="text-white">加载中...</p>
+      <div className="glass-effect rounded-2xl p-12 text-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-light mx-auto mb-4"></div>
+        <p className="text-primary-gray">加载钱包信息...</p>
       </div>
     )
   }
 
   if (!walletInfo) {
     return (
-      <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-6 text-center">
-        <p className="text-red-200">未找到已部署的多签钱包</p>
+      <div className="bg-red-500/5 border border-red-500/30 rounded-2xl p-12 text-center">
+        <p className="text-red-400 text-lg font-semibold">未找到已部署的多签钱包</p>
+        <p className="text-primary-gray mt-2">请先部署一个多签钱包</p>
       </div>
     )
   }
@@ -124,80 +128,104 @@ export function MultiSigWalletViewer() {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* 合约地址卡片 */}
-      <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 rounded-lg p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <Wallet className="w-6 h-6 text-blue-400" />
-          <h3 className="text-xl font-semibold text-white">多签钱包合约</h3>
+      <div className="bg-gradient-to-r from-primary-light/10 to-primary-gray/10 border border-primary-light/30 rounded-2xl p-6">
+        <div className="flex items-center gap-4 mb-5">
+          <div className="w-12 h-12 rounded-xl bg-primary-light/20 flex items-center justify-center">
+            <Wallet className="w-6 h-6 text-primary-light" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-white">多签钱包合约</h3>
+            <p className="text-primary-gray text-sm">MultiSig Wallet Contract</p>
+          </div>
         </div>
-        <div className="bg-black/30 rounded-lg p-4">
-          <p className="text-sm text-blue-300 mb-1">合约地址</p>
-          <p className="text-white font-mono break-all">{contractAddress}</p>
+        <div className="bg-primary-black/50 rounded-xl p-4 border border-primary-light/20">
+          <p className="text-sm text-primary-gray mb-2">合约地址 / Contract Address</p>
+          <p className="text-white font-mono break-all text-sm">{contractAddress}</p>
         </div>
       </div>
 
       {/* 钱包信息网格 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* 余额 */}
-        <div className="bg-white/5 border border-white/20 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Wallet className="w-5 h-5 text-green-400" />
-            <p className="text-sm text-gray-400">合约余额</p>
+        <div className="glass-card rounded-2xl p-5 hover:border-primary-light/40 transition-all">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+              <Wallet className="w-5 h-5 text-green-400" />
+            </div>
+            <p className="text-sm text-primary-gray font-medium">合约余额</p>
           </div>
-          <p className="text-2xl font-bold text-white">
-            {formatBalance(walletInfo.balance)} ETH
+          <p className="text-3xl font-bold text-white">
+            {formatBalance(walletInfo.balance)}
           </p>
+          <p className="text-primary-gray text-sm mt-1">ETH</p>
         </div>
 
         {/* 所有者数量 */}
-        <div className="bg-white/5 border border-white/20 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Users className="w-5 h-5 text-blue-400" />
-            <p className="text-sm text-gray-400">所有者</p>
+        <div className="glass-card rounded-2xl p-5 hover:border-primary-light/40 transition-all">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-primary-light/20 flex items-center justify-center">
+              <Users className="w-5 h-5 text-primary-light" />
+            </div>
+            <p className="text-sm text-primary-gray font-medium">所有者</p>
           </div>
-          <p className="text-2xl font-bold text-white">{walletInfo.owners.length}</p>
+          <p className="text-3xl font-bold text-white">{walletInfo.owners.length}</p>
+          <p className="text-primary-gray text-sm mt-1">Owners</p>
         </div>
 
         {/* 所需确认数 */}
-        <div className="bg-white/5 border border-white/20 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <CheckCircle2 className="w-5 h-5 text-purple-400" />
-            <p className="text-sm text-gray-400">所需确认</p>
+        <div className="glass-card rounded-2xl p-5 hover:border-primary-light/40 transition-all">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-primary-gray/20 flex items-center justify-center">
+              <CheckCircle2 className="w-5 h-5 text-primary-gray" />
+            </div>
+            <p className="text-sm text-primary-gray font-medium">所需确认</p>
           </div>
-          <p className="text-2xl font-bold text-white">
-            {walletInfo.requiredConfirmations} / {walletInfo.owners.length}
+          <p className="text-3xl font-bold text-white">
+            {walletInfo.requiredConfirmations}
           </p>
+          <p className="text-primary-gray text-sm mt-1">/ {walletInfo.owners.length} required</p>
         </div>
 
         {/* 交易数量 */}
-        <div className="bg-white/5 border border-white/20 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <FileText className="w-5 h-5 text-orange-400" />
-            <p className="text-sm text-gray-400">总交易数</p>
+        <div className="glass-card rounded-2xl p-5 hover:border-primary-light/40 transition-all">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-blue-400" />
+            </div>
+            <p className="text-sm text-primary-gray font-medium">总交易数</p>
           </div>
-          <p className="text-2xl font-bold text-white">{walletInfo.transactionCount}</p>
+          <p className="text-3xl font-bold text-white">{walletInfo.transactionCount}</p>
+          <p className="text-primary-gray text-sm mt-1">Transactions</p>
         </div>
       </div>
 
       {/* 所有者列表 */}
-      <div className="bg-white/5 border border-white/20 rounded-lg p-6">
-        <h4 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Users className="w-5 h-5 text-blue-400" />
-          所有者列表
-        </h4>
-        <div className="space-y-2">
+      <div className="glass-card rounded-2xl p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-lg bg-primary-light/20 flex items-center justify-center">
+            <Users className="w-5 h-5 text-primary-light" />
+          </div>
+          <div>
+            <h4 className="text-xl font-bold text-white">所有者列表</h4>
+            <p className="text-primary-gray text-sm">Wallet Owners</p>
+          </div>
+        </div>
+        <div className="space-y-3">
           {walletInfo.owners.map((owner: string, index: number) => (
             <div
               key={index}
-              className="flex items-center justify-between bg-black/30 rounded-lg p-3"
+              className="flex items-center justify-between bg-primary-dark/50 rounded-xl p-4 hover:bg-primary-dark/70 transition-all border border-primary-light/10"
             >
-              <div className="flex items-center gap-3">
-                <span className="text-gray-400 font-mono">#{index + 1}</span>
-                <span className="text-white font-mono">{owner}</span>
+              <div className="flex items-center gap-4">
+                <div className="w-8 h-8 rounded-lg bg-primary-light/20 flex items-center justify-center">
+                  <span className="text-primary-light font-bold text-sm">#{index + 1}</span>
+                </div>
+                <span className="text-white font-mono text-sm">{owner}</span>
               </div>
               {owner.toLowerCase() === address?.toLowerCase() && (
-                <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm">
+                <span className="px-4 py-1.5 bg-gradient-to-r from-primary-light to-primary-gray text-primary-black rounded-lg text-sm font-semibold">
                   你
                 </span>
               )}
@@ -208,48 +236,55 @@ export function MultiSigWalletViewer() {
 
       {/* 当前用户状态 */}
       <div
-        className={`border rounded-lg p-4 ${
+        className={`border rounded-2xl p-6 ${
           isOwner
-            ? 'bg-green-500/10 border-green-500/30'
-            : 'bg-yellow-500/10 border-yellow-500/30'
+            ? 'bg-green-500/5 border-green-500/30'
+            : 'bg-yellow-500/5 border-yellow-500/30'
         }`}
       >
-        <div className="flex items-center gap-3">
-          {isOwner ? (
-            <>
+        <div className="flex items-start gap-4">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+            isOwner ? 'bg-green-500/20' : 'bg-yellow-500/20'
+          }`}>
+            {isOwner ? (
               <CheckCircle2 className="w-6 h-6 text-green-400" />
-              <div>
-                <p className="text-green-400 font-semibold">你是该钱包的所有者</p>
-                <p className="text-green-300 text-sm">你可以提交、确认和执行交易</p>
-              </div>
-            </>
-          ) : (
-            <>
+            ) : (
               <Clock className="w-6 h-6 text-yellow-400" />
-              <div>
-                <p className="text-yellow-400 font-semibold">你不是该钱包的所有者</p>
-                <p className="text-yellow-300 text-sm">你只能查看钱包信息，无法执行操作</p>
-              </div>
-            </>
-          )}
+            )}
+          </div>
+          <div className="flex-1">
+            {isOwner ? (
+              <>
+                <p className="text-green-400 font-bold text-lg mb-1">你是该钱包的所有者</p>
+                <p className="text-green-300/80 text-sm">你可以提交、确认和执行多签交易</p>
+              </>
+            ) : (
+              <>
+                <p className="text-yellow-400 font-bold text-lg mb-1">你不是该钱包的所有者</p>
+                <p className="text-yellow-300/80 text-sm">你只能查看钱包信息，无法执行操作</p>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* 操作按钮（如果是所有者） */}
+      {/* 提示：使用交易管理功能 */}
       {isOwner && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button className="flex items-center justify-center gap-2 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
-            <Send className="w-5 h-5" />
-            提交交易
-          </button>
-          <button className="flex items-center justify-center gap-2 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition">
-            <CheckCircle2 className="w-5 h-5" />
-            确认交易
-          </button>
-          <button className="flex items-center justify-center gap-2 py-3 bg-green-500 text-white rounded-lg hover:green-blue-600 transition">
-            <FileText className="w-5 h-5" />
-            查看交易
-          </button>
+        <div className="bg-primary-light/5 border border-primary-light/30 rounded-2xl p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-lg bg-primary-light/20 flex items-center justify-center flex-shrink-0">
+              <Send className="w-5 h-5 text-primary-light" />
+            </div>
+            <div>
+              <p className="text-white font-semibold text-lg mb-2">管理多签交易</p>
+              <p className="text-primary-gray text-sm mb-4">
+                前往"交易管理"标签页来提交新交易、确认待处理交易或执行已批准的交易
+              </p>
+              <div className="inline-flex items-center gap-2 text-primary-light text-sm font-medium">
+                <span>切换到交易管理 →</span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
