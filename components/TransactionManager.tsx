@@ -308,25 +308,105 @@ export function TransactionManager({ initialContract }: TransactionManagerProps 
     )
   }
 
-  if (!isOwner) {
-    return (
-      <div className="bg-yellow-500/5 border border-yellow-500/30 rounded-2xl p-12 text-center">
-        <Clock className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
-        <p className="text-yellow-400 font-semibold text-lg">你不是该钱包的所有者</p>
-        <p className="text-primary-gray mt-2">只有钱包所有者可以管理交易</p>
-      </div>
-    )
-  }
-
-  if (loading) {
-    return <div className="text-center py-12"><Loader className="w-8 h-8 animate-spin mx-auto text-primary-light" /></div>
-  }
-
-  const pendingTransactions = transactions.filter(tx => !tx.executed)
-  const executedTransactions = transactions.filter(tx => tx.executed)
+  // 当前网络的已保存合约
+  const currentChainContracts = savedContracts.filter(c => c.chainId === chainId)
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* 合约地址输入 */}
+      <div className="glass-effect rounded-2xl p-6">
+        <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+          <Search className="w-5 h-5 text-primary-light" />
+          选择多签钱包
+        </h3>
+        
+        <div className="flex gap-3">
+          <input
+            type="text"
+            value={inputAddress}
+            onChange={(e) => setInputAddress(e.target.value)}
+            placeholder="输入多签钱包合约地址 (0x...)"
+            className="flex-1 px-4 py-3 bg-primary-black/50 border border-primary-gray/30 rounded-xl text-white placeholder-primary-gray/50 focus:outline-none focus:border-primary-light/50 transition-all font-mono text-sm"
+          />
+          <button
+            onClick={() => loadWallet()}
+            disabled={loading || !inputAddress}
+            className="px-6 py-3 bg-gradient-to-r from-primary-light to-primary-gray text-primary-black rounded-xl hover:shadow-lg hover:shadow-primary-light/20 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {loading ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                <span>加载中...</span>
+              </>
+            ) : (
+              <>
+                <Search className="w-4 h-4" />
+                <span>加载钱包</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* 已保存的合约列表 */}
+        {currentChainContracts.length > 0 && (
+          <div className="mt-4 space-y-2">
+            <p className="text-sm text-primary-gray">最近管理的合约：</p>
+            <div className="space-y-2">
+              {currentChainContracts.map((contract) => (
+                <button
+                  key={`${contract.chainId}-${contract.address}`}
+                  onClick={() => loadWallet(contract.address)}
+                  className="w-full text-left px-4 py-2 bg-primary-black/30 rounded-lg border border-primary-gray/20 hover:border-primary-light/30 transition-all font-mono text-sm text-primary-light hover:text-white"
+                >
+                  {contract.address}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 加载状态 */}
+      {loading && (
+        <div className="glass-effect rounded-2xl p-12 text-center">
+          <Loader className="w-12 h-12 animate-spin mx-auto text-primary-light mb-4" />
+          <p className="text-primary-gray">加载钱包信息...</p>
+        </div>
+      )}
+
+      {/* 未加载合约 */}
+      {!loading && !contractAddress && (
+        <div className="bg-primary-light/5 border border-primary-light/20 rounded-2xl p-12 text-center">
+          <div className="w-20 h-20 rounded-2xl bg-primary-light/10 flex items-center justify-center mx-auto mb-6">
+            <Search className="w-10 h-10 text-primary-light" />
+          </div>
+          <p className="text-white text-xl font-semibold mb-2">输入合约地址开始管理</p>
+          <p className="text-primary-gray">在上方输入已部署的多签钱包合约地址</p>
+        </div>
+      )}
+
+      {/* 不是所有者 */}
+      {!loading && contractAddress && !isOwner && (
+        <div className="bg-yellow-500/5 border border-yellow-500/30 rounded-2xl p-12 text-center">
+          <Clock className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
+          <p className="text-yellow-400 font-semibold text-lg">你不是该钱包的所有者</p>
+          <p className="text-primary-gray mt-2">只有钱包所有者可以管理交易</p>
+          <p className="text-primary-gray/70 text-sm mt-4">当前钱包地址：{address?.slice(0, 10)}...{address?.slice(-8)}</p>
+          <p className="text-primary-gray/70 text-sm">合约地址：{contractAddress?.slice(0, 10)}...{contractAddress?.slice(-8)}</p>
+        </div>
+      )}
+
+      {/* 交易管理界面 */}
+      {!loading && contractAddress && isOwner && renderTransactionManager()}
+    </div>
+  )
+
+  function renderTransactionManager() {
+    const pendingTransactions = transactions.filter(tx => !tx.executed)
+    const executedTransactions = transactions.filter(tx => tx.executed)
+
+    return (
+      <div className="space-y-8">
       {/* 提交新交易按钮 */}
       <div className="flex justify-between items-center">
         <div>
@@ -560,6 +640,7 @@ function TransactionCard({
         </div>
       </div>
     </div>
-  )
+    )
+  }
 }
 
