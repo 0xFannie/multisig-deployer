@@ -20,7 +20,11 @@ interface SavedContract {
   addedAt: number
 }
 
-export function TransactionManager() {
+interface TransactionManagerProps {
+  initialContract?: string
+}
+
+export function TransactionManager({ initialContract }: TransactionManagerProps = {}) {
   const { address, isConnected } = useAccount()
   const { data: walletClient } = useWalletClient()
   const publicClient = usePublicClient()
@@ -54,15 +58,23 @@ export function TransactionManager() {
     }
   }, [])
 
+  // 如果有 URL 传入的合约地址，自动加载
+  useEffect(() => {
+    if (initialContract && mounted && isConnected && publicClient) {
+      setInputAddress(initialContract)
+      loadWallet(initialContract)
+    }
+  }, [initialContract, mounted, isConnected, publicClient])
+
   // 尝试加载最近使用的合约
   useEffect(() => {
-    if (mounted && chainId) {
+    if (mounted && chainId && !initialContract) {
       const recentContract = savedContracts.find(c => c.chainId === chainId)
       if (recentContract && !inputAddress) {
         setInputAddress(recentContract.address)
       }
     }
-  }, [mounted, chainId, savedContracts])
+  }, [mounted, chainId, savedContracts, initialContract])
 
   useEffect(() => {
     if (mounted && isConnected && publicClient && contractAddress) {

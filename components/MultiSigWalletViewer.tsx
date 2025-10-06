@@ -12,7 +12,11 @@ interface SavedContract {
   addedAt: number
 }
 
-export function MultiSigWalletViewer() {
+interface MultiSigWalletViewerProps {
+  initialContract?: string
+}
+
+export function MultiSigWalletViewer({ initialContract }: MultiSigWalletViewerProps = {}) {
   const { address, isConnected, chain } = useAccount()
   const publicClient = usePublicClient()
   const chainId = useChainId()
@@ -36,6 +40,14 @@ export function MultiSigWalletViewer() {
       }
     }
   }, [])
+
+  // 如果有 URL 传入的合约地址，自动加载
+  useEffect(() => {
+    if (initialContract && mounted && isConnected && publicClient) {
+      setInputAddress(initialContract)
+      loadWalletInfo(initialContract)
+    }
+  }, [initialContract, mounted, isConnected, publicClient])
 
   // 当链改变或有保存的合约时，尝试加载最近使用的合约
   useEffect(() => {

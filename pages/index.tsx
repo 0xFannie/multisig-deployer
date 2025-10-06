@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useAccount, useConnect, useDisconnect, useChainId, useSwitchChain } from 'wagmi'
 import { Wallet, Eye, Plus, Send, ChevronDown, Check } from 'lucide-react'
+import { useRouter } from 'next/router'
 import { MultiSigDeployer } from '../components/MultiSigDeployer'
 import { MultiSigWalletViewer } from '../components/MultiSigWalletViewer'
 import { TransactionManager } from '../components/TransactionManager'
@@ -48,9 +49,11 @@ const SUPPORTED_NETWORKS = [
 ]
 
 export default function Home() {
+  const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState<'view' | 'deploy' | 'transactions'>('view')
   const [showNetworkMenu, setShowNetworkMenu] = useState(false)
+  const [urlContract, setUrlContract] = useState<string>('')
   const { address, isConnected } = useAccount()
   const { connect, connectors } = useConnect()
   const { disconnect } = useDisconnect()
@@ -80,6 +83,29 @@ export default function Home() {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // 从 URL 参数获取合约地址
+  useEffect(() => {
+    if (router.isReady && router.query.contract) {
+      const contractAddr = router.query.contract as string
+      setUrlContract(contractAddr)
+      
+      // 如果有 chain 参数，尝试切换到对应链
+      if (router.query.chain) {
+        const targetChainId = parseInt(router.query.chain as string)
+        if (targetChainId !== chainId) {
+          switchChain({ chainId: targetChainId })
+        }
+      }
+      
+      // 自动切换到查看或交易管理页面
+      if (router.query.tab === 'transactions') {
+        setActiveTab('transactions')
+      } else {
+        setActiveTab('view')
+      }
+    }
+  }, [router.isReady, router.query])
 
   // 点击外部关闭网络菜单
   useEffect(() => {
@@ -333,9 +359,9 @@ export default function Home() {
           {/* Content */}
           <div className="max-w-6xl mx-auto glass-card rounded-3xl shadow-2xl p-8 md:p-10">
             {activeTab === 'view' ? (
-              <MultiSigWalletViewer />
+              <MultiSigWalletViewer initialContract={urlContract} />
             ) : activeTab === 'transactions' ? (
-              <TransactionManager />
+              <TransactionManager initialContract={urlContract} />
             ) : (
               <div className="space-y-6">
                 <div className="border-b border-primary-light/20 pb-6 mb-8">

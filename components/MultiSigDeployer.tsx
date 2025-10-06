@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAccount, useWalletClient, usePublicClient, useChainId } from 'wagmi'
-import { Plus, Trash2, AlertCircle, CheckCircle, Loader, Copy, ExternalLink } from 'lucide-react'
+import { Plus, Trash2, AlertCircle, CheckCircle, Loader, Copy, ExternalLink, Share2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import MultiSigWalletArtifact from '../artifacts/contracts/MultiSigWallet.sol/MultiSigWallet.json'
 
@@ -58,6 +58,20 @@ export function MultiSigDeployer() {
       toast.success('地址已复制到剪贴板！', { icon: '📋' })
     } catch (error) {
       toast.error('复制失败，请手动复制')
+    }
+  }
+
+  // 生成并复制分享链接
+  const shareContract = async (addr: string) => {
+    try {
+      const shareUrl = `${window.location.origin}?contract=${addr}&chain=${chainId}&tab=transactions`
+      await navigator.clipboard.writeText(shareUrl)
+      toast.success('分享链接已复制！其他所有者可以通过此链接查看和管理交易', { 
+        icon: '🔗',
+        duration: 5000
+      })
+    } catch (error) {
+      toast.error('复制失败')
     }
   }
 
@@ -403,6 +417,14 @@ export function MultiSigDeployer() {
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-3 pl-14">
                 <button
+                  onClick={() => shareContract(deployedAddress)}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg transition-all border border-green-500/30 hover:border-green-500/50 font-medium"
+                >
+                  <Share2 className="w-4 h-4" />
+                  <span>分享给其他所有者</span>
+                </button>
+
+                <button
                   onClick={() => copyToClipboard(deployedAddress)}
                   className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-light/20 hover:bg-primary-light/30 text-primary-light rounded-lg transition-all border border-primary-light/30 hover:border-primary-light/50 font-medium"
                 >
@@ -417,6 +439,15 @@ export function MultiSigDeployer() {
                   <ExternalLink className="w-4 h-4" />
                   <span>在区块链浏览器查看</span>
                 </button>
+              </div>
+              
+              {/* 使用提示 */}
+              <div className="pl-14 pr-4">
+                <div className="bg-primary-light/5 rounded-lg p-4 border border-primary-light/20">
+                  <p className="text-sm text-primary-gray">
+                    💡 <span className="text-white font-medium">提示：</span>点击"分享给其他所有者"复制链接，发送给钱包 B 和 C 的所有者。他们打开链接后，就能看到这个多签钱包并管理交易。
+                  </p>
+                </div>
               </div>
             </div>
           </div>
