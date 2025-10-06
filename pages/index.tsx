@@ -148,7 +148,7 @@ export default function Home() {
                 {isConnected ? (
                   <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
                     {/* Network Selector */}
-                    <div className="relative">
+                    <div className="relative z-50">
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
@@ -167,7 +167,7 @@ export default function Home() {
                       
                       {/* Network Dropdown */}
                       {showNetworkMenu && (
-                        <div className="absolute top-full mt-2 right-0 w-56 glass-card rounded-xl p-2 z-50 shadow-2xl border border-primary-light/20 max-h-96 overflow-y-auto">
+                        <div className="absolute top-full mt-2 right-0 w-56 glass-card rounded-xl p-2 shadow-2xl border border-primary-light/20 max-h-96 overflow-y-auto">
                           {/* Layer 1 Mainnets */}
                           <div className="px-2 py-1.5 text-xs text-primary-gray font-semibold">Layer 1 主网</div>
                           {SUPPORTED_NETWORKS.filter(n => n.type === 'mainnet').map((network) => (

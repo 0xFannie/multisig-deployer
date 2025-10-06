@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useAccount, useWalletClient, usePublicClient } from 'wagmi'
-import { Plus, Trash2, AlertCircle, CheckCircle, Loader } from 'lucide-react'
+import { useAccount, useWalletClient, usePublicClient, useChainId } from 'wagmi'
+import { Plus, Trash2, AlertCircle, CheckCircle, Loader, Copy, ExternalLink } from 'lucide-react'
 import toast from 'react-hot-toast'
 import MultiSigWalletArtifact from '../artifacts/contracts/MultiSigWallet.sol/MultiSigWallet.json'
 
@@ -8,16 +8,58 @@ export function MultiSigDeployer() {
   const { address, isConnected } = useAccount()
   const { data: walletClient } = useWalletClient()
   const publicClient = usePublicClient()
+  const chainId = useChainId()
 
   const [mounted, setMounted] = useState(false)
   const [owners, setOwners] = useState<string[]>([''])
   const [requiredConfirmations, setRequiredConfirmations] = useState<number>(1)
+  const [confirmationPercentage, setConfirmationPercentage] = useState<number>(50) // 默认50%
   const [isDeploying, setIsDeploying] = useState(false)
   const [deployedAddress, setDeployedAddress] = useState<string>('')
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // 根据百分比计算所需确认人数
+  useEffect(() => {
+    const validOwnerCount = owners.filter(o => o.trim()).length
+    if (validOwnerCount > 0) {
+      const calculated = Math.ceil((confirmationPercentage / 100) * validOwnerCount)
+      setRequiredConfirmations(Math.max(1, calculated))
+    }
+  }, [confirmationPercentage, owners])
+
+  // 获取区块链浏览器 URL
+  const getExplorerUrl = (address: string): string => {
+    const explorers: Record<number, string> = {
+      1: 'https://etherscan.io/address/',
+      137: 'https://polygonscan.com/address/',
+      56: 'https://bscscan.com/address/',
+      43114: 'https://snowtrace.io/address/',
+      250: 'https://ftmscan.com/address/',
+      42161: 'https://arbiscan.io/address/',
+      10: 'https://optimistic.etherscan.io/address/',
+      8453: 'https://basescan.org/address/',
+      324: 'https://explorer.zksync.io/address/',
+      534352: 'https://scrollscan.com/address/',
+      1101: 'https://zkevm.polygonscan.com/address/',
+      59144: 'https://lineascan.build/address/',
+      11155111: 'https://sepolia.etherscan.io/address/',
+      5: 'https://goerli.etherscan.io/address/',
+    }
+    return explorers[chainId] ? `${explorers[chainId]}${address}` : `https://etherscan.io/address/${address}`
+  }
+
+  // 复制地址到剪贴板
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success('地址已复制到剪贴板！', { icon: '📋' })
+    } catch (error) {
+      toast.error('复制失败，请手动复制')
+    }
+  }
 
   // 添加所有者地址输入框
   const addOwner = () => {
@@ -220,23 +262,61 @@ export function MultiSigDeployer() {
           </div>
         </div>
 
-        {/* Required Confirmations */}
+        {/* Required Confirmations Slider */}
         <div>
           <label className="text-white font-semibold text-xl block mb-4">
-            所需确认数
+            所需确认比例
           </label>
-          <div className="relative">
-            <input
-              type="number"
-              min="1"
-              max={owners.filter(o => o.trim()).length || 1}
-              value={requiredConfirmations}
-              onChange={(e) => setRequiredConfirmations(parseInt(e.target.value) || 1)}
-              className="w-full px-5 py-4 bg-primary-dark/50 border border-primary-light/20 rounded-xl text-white focus:outline-none focus:border-primary-light focus:ring-2 focus:ring-primary-light/20 text-lg font-semibold"
-            />
+          
+          {/* Percentage Display */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-baseline gap-2">
+              <span className="text-4xl font-bold text-primary-light">{confirmationPercentage}%</span>
+              <span className="text-primary-gray text-sm">确认比例</span>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-white">{requiredConfirmations} / {owners.filter(o => o.trim()).length}</div>
+              <div className="text-primary-gray text-xs">需要确认的所有者</div>
+            </div>
           </div>
-          <p className="text-primary-gray text-sm mt-3 bg-primary-light/5 px-4 py-2 rounded-lg inline-block">
-            执行交易需要 <span className="text-primary-light font-semibold">{requiredConfirmations}</span> / <span className="text-white font-semibold">{owners.filter(o => o.trim()).length}</span> 个所有者确认
+
+          {/* Slider */}
+          <div className="relative pt-6 pb-2">
+            <input
+              type="range"
+              min="1"
+              max="100"
+              value={confirmationPercentage}
+              onChange={(e) => setConfirmationPercentage(parseInt(e.target.value))}
+              className="w-full h-2 bg-primary-gray/30 rounded-lg appearance-none cursor-pointer slider-thumb"
+              style={{
+                background: `linear-gradient(to right, rgb(248, 227, 214) 0%, rgb(248, 227, 214) ${confirmationPercentage}%, rgb(120, 126, 145, 0.3) ${confirmationPercentage}%, rgb(120, 126, 145, 0.3) 100%)`
+              }}
+            />
+            
+            {/* Percentage Markers */}
+            <div className="flex justify-between mt-2 px-1">
+              {[25, 50, 75, 100].map((mark) => (
+                <button
+                  key={mark}
+                  onClick={() => setConfirmationPercentage(mark)}
+                  className={`text-xs font-medium transition-all ${
+                    Math.abs(confirmationPercentage - mark) < 5
+                      ? 'text-primary-light scale-110'
+                      : 'text-primary-gray hover:text-white'
+                  }`}
+                >
+                  {mark}%
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <p className="text-primary-gray text-sm mt-4 bg-primary-light/5 px-4 py-3 rounded-lg border border-primary-light/10">
+            💡 设置为 <span className="text-primary-light font-semibold">{confirmationPercentage}%</span> 意味着执行交易需要 <span className="text-white font-semibold">{requiredConfirmations}</span> 个所有者确认
+            {confirmationPercentage === 100 && <span className="text-yellow-400"> (需要所有人同意)</span>}
+            {confirmationPercentage >= 67 && confirmationPercentage < 100 && <span className="text-green-400"> (超过2/3，高安全性)</span>}
+            {confirmationPercentage === 50 && <span className="text-blue-400"> (简单多数)</span>}
           </p>
         </div>
 
@@ -293,17 +373,38 @@ export function MultiSigDeployer() {
         {/* Deployed Address */}
         {deployedAddress && (
           <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-6">
-            <div className="flex gap-4">
-              <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                <CheckCircle className="w-6 h-6 text-green-400" />
-              </div>
-              <div className="flex-1">
-                <p className="text-green-400 font-semibold mb-3 text-lg">部署成功！</p>
-                <div className="bg-primary-black/50 rounded-lg p-3 border border-green-500/30">
-                  <p className="text-white font-mono text-sm break-all">
-                    {deployedAddress}
-                  </p>
+            <div className="flex flex-col gap-4">
+              <div className="flex gap-4">
+                <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                  <CheckCircle className="w-6 h-6 text-green-400" />
                 </div>
+                <div className="flex-1">
+                  <p className="text-green-400 font-semibold mb-3 text-lg">部署成功！</p>
+                  <div className="bg-primary-black/50 rounded-lg p-3 border border-green-500/30">
+                    <p className="text-white font-mono text-sm break-all">
+                      {deployedAddress}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 pl-14">
+                <button
+                  onClick={() => copyToClipboard(deployedAddress)}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-light/20 hover:bg-primary-light/30 text-primary-light rounded-lg transition-all border border-primary-light/30 hover:border-primary-light/50 font-medium"
+                >
+                  <Copy className="w-4 h-4" />
+                  <span>复制地址</span>
+                </button>
+                
+                <button
+                  onClick={() => window.open(getExplorerUrl(deployedAddress), '_blank', 'noopener,noreferrer')}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-all border border-blue-500/30 hover:border-blue-500/50 font-medium"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span>在区块链浏览器查看</span>
+                </button>
               </div>
             </div>
           </div>
