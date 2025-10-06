@@ -25,7 +25,7 @@ export function TransactionManager() {
   const [loading, setLoading] = useState(true)
   const [isOwner, setIsOwner] = useState(false)
   const [requiredConfirmations, setRequiredConfirmations] = useState(0)
-  const [contractAddress, setContractAddress] = useState<`0x${string}` | null>(null)
+  const [contractAddress, setContractAddress] = useState<`0x${string}` | undefined>(undefined)
   
   // 提交新交易的表单
   const [showSubmitForm, setShowSubmitForm] = useState(false)
@@ -36,7 +36,7 @@ export function TransactionManager() {
   // 根据当前网络获取合约地址
   useEffect(() => {
     const addr = getContractAddress(chainId)
-    setContractAddress(addr as `0x${string}` | null)
+    setContractAddress(addr ? (addr as `0x${string}`) : undefined)
   }, [chainId])
 
   useEffect(() => {
@@ -53,9 +53,14 @@ export function TransactionManager() {
     try {
       setLoading(true)
 
+      if (!contractAddress) {
+        setLoading(false)
+        return
+      }
+
       // 检查是否为所有者
       const ownerStatus = await publicClient!.readContract({
-        address: contractAddress,
+        address: contractAddress as `0x${string}`,
         abi: MultiSigWalletABI.abi,
         functionName: 'isOwner',
         args: [address],
@@ -64,7 +69,7 @@ export function TransactionManager() {
 
       // 获取所需确认数
       const required = await publicClient!.readContract({
-        address: contractAddress,
+        address: contractAddress as `0x${string}`,
         abi: MultiSigWalletABI.abi,
         functionName: 'numConfirmationsRequired',
       })
@@ -72,7 +77,7 @@ export function TransactionManager() {
 
       // 获取交易数量
       const txCount = await publicClient!.readContract({
-        address: contractAddress,
+        address: contractAddress as `0x${string}`,
         abi: MultiSigWalletABI.abi,
         functionName: 'getTransactionCount',
       })
@@ -81,7 +86,7 @@ export function TransactionManager() {
       const txList: Transaction[] = []
       for (let i = 0; i < Number(txCount); i++) {
         const tx = await publicClient!.readContract({
-          address: contractAddress,
+          address: contractAddress as `0x${string}`,
           abi: MultiSigWalletABI.abi,
           functionName: 'getTransaction',
           args: [BigInt(i)],
@@ -123,7 +128,7 @@ export function TransactionManager() {
       const value = parseEther(amount)
       
       const hash = await walletClient.writeContract({
-        address: contractAddress,
+        address: contractAddress as `0x${string}`,
         abi: MultiSigWalletABI.abi,
         functionName: 'submitTransaction',
         args: [recipient, value, '0x'],
@@ -153,7 +158,7 @@ export function TransactionManager() {
     const toastId = toast.loading('确认交易中...')
     try {
       const hash = await walletClient.writeContract({
-        address: contractAddress,
+        address: contractAddress as `0x${string}`,
         abi: MultiSigWalletABI.abi,
         functionName: 'confirmTransaction',
         args: [BigInt(txIndex)],
@@ -175,7 +180,7 @@ export function TransactionManager() {
     const toastId = toast.loading('撤销确认中...')
     try {
       const hash = await walletClient.writeContract({
-        address: contractAddress,
+        address: contractAddress as `0x${string}`,
         abi: MultiSigWalletABI.abi,
         functionName: 'revokeConfirmation',
         args: [BigInt(txIndex)],
@@ -197,7 +202,7 @@ export function TransactionManager() {
     const toastId = toast.loading('执行交易中...')
     try {
       const hash = await walletClient.writeContract({
-        address: contractAddress,
+        address: contractAddress as `0x${string}`,
         abi: MultiSigWalletABI.abi,
         functionName: 'executeTransaction',
         args: [BigInt(txIndex)],
@@ -215,8 +220,10 @@ export function TransactionManager() {
 
   const checkIsConfirmed = async (txIndex: number): Promise<boolean> => {
     try {
+      if (!contractAddress) return false
+      
       const confirmed = await publicClient!.readContract({
-        address: contractAddress,
+        address: contractAddress as `0x${string}`,
         abi: MultiSigWalletABI.abi,
         functionName: 'isConfirmed',
         args: [BigInt(txIndex), address],
