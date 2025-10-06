@@ -133,7 +133,7 @@ export default function Home() {
           </div>
 
           {/* Wallet Connection Bar */}
-          <div className="max-w-6xl mx-auto mb-8">
+          <div className="max-w-6xl mx-auto mb-8 relative z-50">
             <div className="glass-card rounded-2xl shadow-2xl p-5 transition-all hover:shadow-primary-light/10">
               <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
                 <div className="flex items-center gap-3">
@@ -167,7 +167,7 @@ export default function Home() {
                       
                       {/* Network Dropdown */}
                       {showNetworkMenu && (
-                        <div className="absolute top-full mt-2 right-0 w-56 glass-card rounded-xl p-2 shadow-2xl border border-primary-light/20 max-h-96 overflow-y-auto">
+                        <div className="absolute top-full mt-2 right-0 w-56 glass-card rounded-xl p-2 shadow-2xl border border-primary-light/20 max-h-96 overflow-y-auto z-[9999]">
                           {/* Layer 1 Mainnets */}
                           <div className="px-2 py-1.5 text-xs text-primary-gray font-semibold">Layer 1 主网</div>
                           {SUPPORTED_NETWORKS.filter(n => n.type === 'mainnet').map((network) => (
