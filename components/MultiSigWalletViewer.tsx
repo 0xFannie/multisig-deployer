@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
-import { useAccount, usePublicClient } from 'wagmi'
+import { useAccount, usePublicClient, useChainId } from 'wagmi'
 import { Wallet, Users, CheckCircle2, Clock, Send, FileText } from 'lucide-react'
-import { DEPLOYED_CONTRACTS } from '../lib/contracts'
+import { getContractAddress } from '../lib/contracts'
 import MultiSigWalletABI from '../artifacts/contracts/MultiSigWallet.sol/MultiSigWallet.json'
 
 export function MultiSigWalletViewer() {
   const { address, isConnected, chain } = useAccount()
   const publicClient = usePublicClient()
+  const chainId = useChainId()
 
   const [mounted, setMounted] = useState(false)
   const [walletInfo, setWalletInfo] = useState<any>(null)
@@ -29,9 +30,9 @@ export function MultiSigWalletViewer() {
     try {
       setLoading(true)
       
-      // 获取已部署的合约地址
-      const deployedAddr = DEPLOYED_CONTRACTS.localhost.MultiSigWallet
-      setContractAddress(deployedAddr)
+      // 根据当前网络获取合约地址
+      const deployedAddr = getContractAddress(chainId)
+      setContractAddress(deployedAddr || '')
 
       if (!deployedAddr || !publicClient) {
         setLoading(false)

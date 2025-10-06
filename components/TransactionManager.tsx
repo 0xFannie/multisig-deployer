@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useAccount, useWalletClient, usePublicClient } from 'wagmi'
+import { useAccount, useWalletClient, usePublicClient, useChainId } from 'wagmi'
 import { Send, CheckCircle2, XCircle, PlayCircle, Clock, ArrowRight, Loader } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { DEPLOYED_CONTRACTS } from '../lib/contracts'
+import { getContractAddress } from '../lib/contracts'
 import MultiSigWalletABI from '../artifacts/contracts/MultiSigWallet.sol/MultiSigWallet.json'
 import { parseEther, formatEther } from 'viem'
 
@@ -18,12 +18,14 @@ export function TransactionManager() {
   const { address, isConnected } = useAccount()
   const { data: walletClient } = useWalletClient()
   const publicClient = usePublicClient()
+  const chainId = useChainId()
 
   const [mounted, setMounted] = useState(false)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [isOwner, setIsOwner] = useState(false)
   const [requiredConfirmations, setRequiredConfirmations] = useState(0)
+  const [contractAddress, setContractAddress] = useState<`0x${string}` | null>(null)
   
   // 提交新交易的表单
   const [showSubmitForm, setShowSubmitForm] = useState(false)
@@ -31,7 +33,11 @@ export function TransactionManager() {
   const [amount, setAmount] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const contractAddress = DEPLOYED_CONTRACTS.localhost.MultiSigWallet as `0x${string}`
+  // 根据当前网络获取合约地址
+  useEffect(() => {
+    const addr = getContractAddress(chainId)
+    setContractAddress(addr as `0x${string}` | null)
+  }, [chainId])
 
   useEffect(() => {
     setMounted(true)
