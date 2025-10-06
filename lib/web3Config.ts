@@ -1,14 +1,14 @@
 ﻿import { http, createConfig } from 'wagmi'
-import { arbitrum, mainnet, polygon, bsc, sepolia, localhost } from 'wagmi/chains'
+import { arbitrum, mainnet, polygon, bsc, sepolia } from 'wagmi/chains'
 import { injected } from 'wagmi/connectors'
 
-export const chains = [localhost, mainnet, polygon, bsc, arbitrum, sepolia] as const
+// 移除 localhost，优先使用真实网络
+export const chains = [mainnet, polygon, bsc, arbitrum, sepolia] as const
 
 export const wagmiConfig = createConfig({
-  chains: [localhost, mainnet, polygon, bsc, arbitrum, sepolia],
+  chains: [mainnet, polygon, bsc, arbitrum, sepolia],
   connectors: [injected()],
   transports: {
-    [localhost.id]: http('http://127.0.0.1:8545'),
     [mainnet.id]: http(),
     [polygon.id]: http(),
     [bsc.id]: http(),
