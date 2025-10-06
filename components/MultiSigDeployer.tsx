@@ -165,6 +165,18 @@ export function MultiSigDeployer() {
 
       if (receipt.contractAddress) {
         setDeployedAddress(receipt.contractAddress)
+        
+        // 保存到本地存储
+        const saved = localStorage.getItem('multisig_contracts')
+        const contracts = saved ? JSON.parse(saved) : []
+        const newContract = {
+          address: receipt.contractAddress,
+          chainId,
+          addedAt: Date.now()
+        }
+        contracts.unshift(newContract)
+        localStorage.setItem('multisig_contracts', JSON.stringify(contracts.slice(0, 10)))
+        
         toast.success(
           `合约部署成功！\n地址: ${receipt.contractAddress.slice(0, 6)}...${receipt.contractAddress.slice(-4)}`,
           { id: toastId, duration: 5000 }

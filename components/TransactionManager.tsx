@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAccount, useWalletClient, usePublicClient, useChainId } from 'wagmi'
-import { Send, CheckCircle2, XCircle, PlayCircle, Clock, ArrowRight, Loader } from 'lucide-react'
+import { Send, CheckCircle2, XCircle, PlayCircle, Clock, ArrowRight, Loader, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getContractAddress } from '../lib/contracts'
 import MultiSigWalletABI from '../artifacts/contracts/MultiSigWallet.sol/MultiSigWallet.json'
@@ -14,6 +14,12 @@ interface Transaction {
   numConfirmations: bigint
 }
 
+interface SavedContract {
+  address: string
+  chainId: number
+  addedAt: number
+}
+
 export function TransactionManager() {
   const { address, isConnected } = useAccount()
   const { data: walletClient } = useWalletClient()
@@ -22,10 +28,12 @@ export function TransactionManager() {
 
   const [mounted, setMounted] = useState(false)
   const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [isOwner, setIsOwner] = useState(false)
   const [requiredConfirmations, setRequiredConfirmations] = useState(0)
   const [contractAddress, setContractAddress] = useState<`0x${string}` | undefined>(undefined)
+  const [inputAddress, setInputAddress] = useState<string>('')
+  const [savedContracts, setSavedContracts] = useState<SavedContract[]>([])
   
   // 提交新交易的表单
   const [showSubmitForm, setShowSubmitForm] = useState(false)
@@ -33,15 +41,28 @@ export function TransactionManager() {
   const [amount, setAmount] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // 根据当前网络获取合约地址
-  useEffect(() => {
-    const addr = getContractAddress(chainId)
-    setContractAddress(addr ? (addr as `0x${string}`) : undefined)
-  }, [chainId])
-
+  // 加载保存的合约列表
   useEffect(() => {
     setMounted(true)
+    const saved = localStorage.getItem('multisig_contracts')
+    if (saved) {
+      try {
+        setSavedContracts(JSON.parse(saved))
+      } catch (error) {
+        console.error('Failed to load saved contracts:', error)
+      }
+    }
   }, [])
+
+  // 尝试加载最近使用的合约
+  useEffect(() => {
+    if (mounted && chainId) {
+      const recentContract = savedContracts.find(c => c.chainId === chainId)
+      if (recentContract && !inputAddress) {
+        setInputAddress(recentContract.address)
+      }
+    }
+  }, [mounted, chainId, savedContracts])
 
   useEffect(() => {
     if (mounted && isConnected && publicClient && contractAddress) {
@@ -49,18 +70,47 @@ export function TransactionManager() {
     }
   }, [mounted, isConnected, publicClient, contractAddress])
 
-  const loadData = async () => {
+  const loadWallet = async (targetAddress?: string) => {
     try {
       setLoading(true)
+      const addressToLoad = targetAddress || inputAddress
+      
+      if (!addressToLoad || !publicClient) {
+        setLoading(false)
+        return
+      }
 
-      if (!contractAddress) {
+      // 验证地址格式
+      if (!/^0x[a-fA-F0-9]{40}$/.test(addressToLoad)) {
+        toast.error('无效的合约地址格式')
+        setLoading(false)
+        return
+      }
+
+      setContractAddress(addressToLoad as `0x${string}`)
+      await loadData(addressToLoad as `0x${string}`)
+      toast.success('合约加载成功！')
+    } catch (error) {
+      console.error('Failed to load wallet:', error)
+      toast.error('加载合约失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadData = async (addr?: `0x${string}`) => {
+    try {
+      setLoading(true)
+      const targetAddr = addr || contractAddress
+
+      if (!targetAddr) {
         setLoading(false)
         return
       }
 
       // 检查是否为所有者
       const ownerStatus = await publicClient!.readContract({
-        address: contractAddress as `0x${string}`,
+        address: targetAddr,
         abi: MultiSigWalletABI.abi,
         functionName: 'isOwner',
         args: [address],
@@ -69,7 +119,7 @@ export function TransactionManager() {
 
       // 获取所需确认数
       const required = await publicClient!.readContract({
-        address: contractAddress as `0x${string}`,
+        address: targetAddr,
         abi: MultiSigWalletABI.abi,
         functionName: 'numConfirmationsRequired',
       })
@@ -77,7 +127,7 @@ export function TransactionManager() {
 
       // 获取交易数量
       const txCount = await publicClient!.readContract({
-        address: contractAddress as `0x${string}`,
+        address: targetAddr,
         abi: MultiSigWalletABI.abi,
         functionName: 'getTransactionCount',
       })
@@ -86,7 +136,7 @@ export function TransactionManager() {
       const txList: Transaction[] = []
       for (let i = 0; i < Number(txCount); i++) {
         const tx = await publicClient!.readContract({
-          address: contractAddress as `0x${string}`,
+          address: targetAddr,
           abi: MultiSigWalletABI.abi,
           functionName: 'getTransaction',
           args: [BigInt(i)],
