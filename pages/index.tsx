@@ -3,6 +3,9 @@ import { useState, useEffect } from 'react'
 import { useAccount, useConnect, useDisconnect, useChainId, useSwitchChain } from 'wagmi'
 import { Wallet, Eye, Plus, Send, ChevronDown, Check } from 'lucide-react'
 import { useRouter } from 'next/router'
+import { useTranslation } from 'next-i18next'
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
+import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { MultiSigDeployer } from '../components/MultiSigDeployer'
 import { MultiSigWalletViewer } from '../components/MultiSigWalletViewer'
 import { TransactionManager } from '../components/TransactionManager'
@@ -49,6 +52,7 @@ const SUPPORTED_NETWORKS = [
 ]
 
 export default function Home() {
+  const { t } = useTranslation('common')
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState<'view' | 'deploy' | 'transactions'>('view')
@@ -377,4 +381,12 @@ export default function Home() {
       </div>
     </>
   )
+}
+
+export async function getStaticProps({ locale }: { locale: string }) {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ['common'])),
+    },
+  }
 }
