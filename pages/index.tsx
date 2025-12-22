@@ -62,12 +62,12 @@ export default function Home() {
   }, [router.isReady, router.query])
 
 
-  if (!mounted) {
+  if (!mounted || !ready) {
     return (
       <>
         <Head>
-          <title>{t('title')}</title>
-          <meta name='description' content={t('subtitle')} />
+          <title>MultiSig Wallet Deployer</title>
+          <meta name='description' content="Secure and reliable enterprise-grade multi-signature wallet solution" />
         </Head>
         <div className="min-h-screen bg-primary-black flex items-center justify-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-light"></div>
@@ -79,8 +79,8 @@ export default function Home() {
   return (
     <>
         <Head>
-          <title>{t('title')} - {t('index.managementTool')}</title>
-          <meta name='description' content={t('subtitle')} />
+          <title>{ready ? `${t('title')} - ${t('index.managementTool')}` : 'MultiSig Wallet Deployer'}</title>
+          <meta name='description' content={ready ? t('subtitle') : 'Secure and reliable enterprise-grade multi-signature wallet solution'} />
         </Head>
       
       <div className="min-h-screen bg-primary-black relative overflow-hidden">
@@ -301,27 +301,48 @@ export default function Home() {
 export async function getServerSideProps(context: any) {
   try {
     const { locale } = context
+    console.log('[getServerSideProps] Starting with locale:', locale)
+    
     const translations = await serverSideTranslations(locale || 'zh-CN', ['common'])
+    console.log('[getServerSideProps] Translations loaded successfully')
+    
     return {
       props: {
         ...translations,
       },
     }
   } catch (error: any) {
-    console.error('Error in getServerSideProps:', error)
+    console.error('[getServerSideProps] Error loading translations:', error)
+    console.error('[getServerSideProps] Error details:', {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+    })
+    
     // 如果翻译加载失败，尝试使用默认语言
     try {
+      console.log('[getServerSideProps] Attempting fallback to zh-CN')
       const fallbackTranslations = await serverSideTranslations('zh-CN', ['common'])
+      console.log('[getServerSideProps] Fallback translations loaded successfully')
       return {
         props: {
           ...fallbackTranslations,
         },
       }
     } catch (fallbackError: any) {
-      console.error('Fallback translation also failed:', fallbackError)
+      console.error('[getServerSideProps] Fallback translation also failed:', fallbackError)
+      console.error('[getServerSideProps] Fallback error details:', {
+        message: fallbackError?.message,
+        stack: fallbackError?.stack,
+        name: fallbackError?.name,
+      })
+      
       // 如果默认语言也失败，返回空 props（页面会使用硬编码的文本）
+      // 这不应该导致 500 错误
       return {
-        props: {},
+        props: {
+          _error: 'Translation loading failed',
+        },
       }
     }
   }
