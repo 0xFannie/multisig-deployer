@@ -708,24 +708,24 @@ export function TransferModal({
   const networkName = network?.name || (contractChainId ? `Chain ${contractChainId}` : '')
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-all duration-300 ${showContractSelector ? 'backdrop-blur-md' : ''}`}>
-      <div className={`glass-card rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4 transition-all duration-300 ${showContractSelector ? 'opacity-30 blur-sm pointer-events-none' : 'opacity-100 blur-0'}`}>
+    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-all duration-300 p-0 sm:p-4 ${showContractSelector ? 'backdrop-blur-md' : ''}`}>
+      <div className={`glass-card rounded-xl sm:rounded-2xl shadow-2xl w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto m-0 sm:m-4 transition-all duration-300 ${showContractSelector ? 'opacity-30 blur-sm pointer-events-none' : 'opacity-100 blur-0'}`}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-primary-light/20">
-          <div>
-            <h2 className="text-2xl font-bold text-white">{t('transfer.title')}</h2>
-            <p className="text-primary-gray text-sm mt-1">{t('transfer.subtitle')}</p>
+          <div className="flex-1 min-w-0 pr-2">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white">{t('transfer.title')}</h2>
+            <p className="text-primary-gray text-xs sm:text-sm mt-1">{t('transfer.subtitle')}</p>
           </div>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-primary-light/20 rounded-lg transition-all"
+            className="p-2 hover:bg-primary-light/20 rounded-lg transition-all flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
             <X className="w-5 h-5 text-primary-gray hover:text-white" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* 合约钱包信息 - 可点击选择 */}
           <div 
             onClick={() => !contractAddress && setShowContractSelector(true)}

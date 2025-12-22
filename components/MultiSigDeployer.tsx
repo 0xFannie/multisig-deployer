@@ -394,7 +394,7 @@ export function MultiSigDeployer() {
         <div>
           <div className="flex justify-between items-center mb-6">
             <div>
-              <label className="text-white font-semibold text-xl block mb-1">
+              <label className="text-white font-semibold text-lg sm:text-xl block mb-1">
                 {t('deploy.owners')}
               </label>
               <p className="text-primary-gray text-sm">
@@ -403,7 +403,7 @@ export function MultiSigDeployer() {
             </div>
             <button
               onClick={addOwner}
-              className="flex items-center gap-2 px-5 py-2.5 bg-primary-light/10 text-primary-light rounded-xl hover:bg-primary-light/20 transition-all border border-primary-light/30 font-medium"
+              className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-primary-light/10 text-primary-light rounded-lg sm:rounded-xl hover:bg-primary-light/20 transition-all border border-primary-light/30 font-medium text-sm sm:text-base"
             >
               <Plus className="w-5 h-5" />
               {t('deploy.addAddress')}
@@ -412,27 +412,27 @@ export function MultiSigDeployer() {
 
           <div className="space-y-3">
             {owners.map((owner, index) => (
-              <div key={index} className="flex gap-3">
+              <div key={index} className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <div className="flex-1 relative">
                   <input
                     type="text"
                     value={owner}
                     onChange={(e) => updateOwner(index, e.target.value)}
                     placeholder="0x..."
-                    className="w-full px-5 py-4 bg-primary-dark/50 border border-primary-light/20 rounded-xl text-white placeholder-primary-gray focus:outline-none focus:border-primary-light focus:ring-2 focus:ring-primary-light/20 font-mono text-sm transition-all"
+                    className="w-full px-3 sm:px-5 py-3 sm:py-4 bg-primary-dark/50 border border-primary-light/20 rounded-lg sm:rounded-xl text-white placeholder-primary-gray focus:outline-none focus:border-primary-light focus:ring-2 focus:ring-primary-light/20 font-mono text-xs sm:text-sm transition-all"
                   />
                 </div>
                 <button
                   onClick={() => useCurrentAddress(index)}
                   disabled={!isConnected}
-                  className="px-5 py-4 bg-primary-gray/20 text-primary-gray rounded-xl hover:bg-primary-gray/30 hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap font-medium border border-primary-gray/30"
+                  className="px-3 sm:px-5 py-3 sm:py-4 bg-primary-gray/20 text-primary-gray rounded-lg sm:rounded-xl hover:bg-primary-gray/30 hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap font-medium border border-primary-gray/30 text-sm sm:text-base"
                 >
                   {t('deploy.useCurrent')}
                 </button>
                 {owners.length > 1 && (
                   <button
                     onClick={() => removeOwner(index)}
-                    className="px-4 py-4 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-all border border-red-500/30"
+                    className="px-3 sm:px-4 py-3 sm:py-4 bg-red-500/10 text-red-400 rounded-lg sm:rounded-xl hover:bg-red-500/20 transition-all border border-red-500/30 min-h-[44px]"
                   >
                     <Trash2 className="w-5 h-5" />
                   </button>
@@ -444,18 +444,18 @@ export function MultiSigDeployer() {
 
         {/* Required Confirmations Slider */}
         <div>
-          <label className="text-white font-semibold text-xl block mb-4">
+          <label className="text-white font-semibold text-lg sm:text-xl block mb-3 sm:mb-4">
             {t('deploy.requiredConfirmations')}
           </label>
           
           {/* Percentage Display */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-primary-light">{confirmationPercentage}%</span>
-              <span className="text-primary-gray text-sm">{t('deploy.confirmationPercentage')}</span>
+              <span className="text-2xl sm:text-3xl md:text-4xl font-bold text-primary-light">{confirmationPercentage}%</span>
+              <span className="text-primary-gray text-xs sm:text-sm">{t('deploy.confirmationPercentage')}</span>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-bold text-white">{requiredConfirmations} / {owners.filter(o => o.trim()).length}</div>
+              <div className="text-xl sm:text-2xl font-bold text-white">{requiredConfirmations} / {owners.filter(o => o.trim()).length}</div>
               <div className="text-primary-gray text-xs">{t('deploy.requiredOwners')}</div>
             </div>
           </div>
@@ -501,14 +501,14 @@ export function MultiSigDeployer() {
         </div>
 
         {/* Info Box */}
-        <div className="bg-primary-light/5 border border-primary-light/30 rounded-2xl p-6">
-          <div className="flex gap-4">
-            <div className="w-10 h-10 rounded-lg bg-primary-light/20 flex items-center justify-center flex-shrink-0">
-              <AlertCircle className="w-6 h-6 text-primary-light" />
+        <div className="bg-primary-light/5 border border-primary-light/30 rounded-xl sm:rounded-2xl p-4 sm:p-6">
+          <div className="flex gap-3 sm:gap-4">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary-light/20 flex items-center justify-center flex-shrink-0">
+              <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-primary-light" />
             </div>
-            <div className="text-sm">
-              <p className="font-semibold mb-3 text-white text-base">{t('deploy.deployInstructions')}</p>
-              <ul className="space-y-2 text-primary-gray">
+            <div className="text-xs sm:text-sm">
+              <p className="font-semibold mb-2 sm:mb-3 text-white text-sm sm:text-base">{t('deploy.deployInstructions')}</p>
+              <ul className="space-y-1.5 sm:space-y-2 text-primary-gray">
                 <li className="flex items-start gap-2">
                   <span className="text-primary-light mt-0.5">•</span>
                   <span>{t('deploy.instruction1')}</span>
@@ -534,7 +534,7 @@ export function MultiSigDeployer() {
         <button
           onClick={deployContract}
           disabled={isDeploying || !isConnected}
-          className="w-full py-5 bg-gradient-to-r from-primary-light to-primary-gray text-primary-black rounded-2xl font-bold text-lg hover:shadow-2xl hover:shadow-primary-light/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
+          className="w-full py-4 sm:py-5 bg-gradient-to-r from-primary-light to-primary-gray text-primary-black rounded-xl sm:rounded-2xl font-bold text-base sm:text-lg hover:shadow-2xl hover:shadow-primary-light/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 sm:gap-3 relative overflow-hidden group min-h-[52px]"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
           {isDeploying ? (
@@ -552,16 +552,16 @@ export function MultiSigDeployer() {
 
         {/* Deployed Address */}
         {deployedAddress && (
-          <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-6">
-            <div className="flex flex-col gap-4">
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="w-6 h-6 text-green-400" />
+          <div className="bg-green-500/10 border border-green-500/30 rounded-xl sm:rounded-2xl p-4 sm:p-6">
+            <div className="flex flex-col gap-3 sm:gap-4">
+              <div className="flex gap-3 sm:gap-4">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                  <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-green-400 font-semibold mb-3 text-lg">{t('deploy.deploySuccess')}</p>
-                  <div className="bg-primary-black/50 rounded-lg p-3 border border-green-500/30">
-                    <p className="text-white font-mono text-sm break-all">
+                <div className="flex-1 min-w-0">
+                  <p className="text-green-400 font-semibold mb-2 sm:mb-3 text-base sm:text-lg">{t('deploy.deploySuccess')}</p>
+                  <div className="bg-primary-black/50 rounded-lg p-2 sm:p-3 border border-green-500/30">
+                    <p className="text-white font-mono text-xs sm:text-sm break-all">
                       {deployedAddress}
                     </p>
                   </div>
@@ -569,7 +569,7 @@ export function MultiSigDeployer() {
               </div>
               
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 pl-14">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:pl-14">
                 <button
                   onClick={() => shareContract(deployedAddress)}
                   className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg transition-all border border-green-500/30 hover:border-green-500/50 font-medium"
@@ -596,9 +596,9 @@ export function MultiSigDeployer() {
               </div>
               
               {/* 使用提示 */}
-              <div className="pl-14 pr-4">
-                <div className="bg-primary-light/5 rounded-lg p-4 border border-primary-light/20">
-                  <p className="text-sm text-primary-gray">
+              <div className="sm:pl-14 pr-0 sm:pr-4">
+                <div className="bg-primary-light/5 rounded-lg p-3 sm:p-4 border border-primary-light/20">
+                  <p className="text-xs sm:text-sm text-primary-gray">
                     💡 <span className="text-white font-medium">{t('deploy.tip')}：</span>{t('deploy.shareTip')}
                   </p>
                 </div>

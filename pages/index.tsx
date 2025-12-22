@@ -98,23 +98,27 @@ export default function Home() {
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-primary-gray/10 rounded-full blur-3xl"></div>
         
         {/* Top Right Buttons - Language Switcher and Connect Wallet */}
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-3">
-          <LanguageSwitcher />
-          <ConnectButton />
+        <div className="fixed top-2 right-2 sm:top-4 sm:right-4 z-50 flex items-center gap-2 sm:gap-3">
+          <div className="scale-90 sm:scale-100">
+            <LanguageSwitcher />
+          </div>
+          <div className="scale-90 sm:scale-100">
+            <ConnectButton />
+          </div>
         </div>
         
-        <div className="container mx-auto px-4 py-8 relative z-10">
+        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 relative z-10">
           {/* Header */}
-          <div className="text-center mb-12">
-            <div className="inline-block mb-6">
-              <div className="text-6xl font-bold bg-gradient-to-r from-primary-light via-white to-primary-gray bg-clip-text text-transparent">
+          <div className="text-center mb-6 sm:mb-12 pt-12 sm:pt-0">
+            <div className="inline-block mb-4 sm:mb-6">
+              <div className="text-3xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary-light via-white to-primary-gray bg-clip-text text-transparent">
                 {t('index.multiSigWallet')}
               </div>
             </div>
-            <h1 className="text-3xl font-semibold text-white mb-3">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-white mb-2 sm:mb-3">
               {t('index.managementTool')}
             </h1>
-            <p className="text-lg text-primary-gray max-w-2xl mx-auto">
+            <p className="text-sm sm:text-base md:text-lg text-primary-gray max-w-2xl mx-auto px-2">
               {t('index.enterpriseSolution')}
             </p>
           </div>
@@ -123,9 +127,9 @@ export default function Home() {
           {!isConnected ? (
             <div className="max-w-6xl mx-auto space-y-12 pb-8">
               {/* 产品优势 */}
-              <div className="glass-card rounded-3xl shadow-2xl p-8 md:p-10">
-                <h2 className="text-3xl font-bold text-white mb-8 text-center">{t('index.whyChooseTitle')}</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="glass-card rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 md:p-8 lg:p-10">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-6 sm:mb-8 text-center">{t('index.whyChooseTitle')}</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
                   <div className="flex flex-col items-center text-center p-6 rounded-xl bg-primary-dark/50 border border-primary-light/10 hover:border-primary-light/30 transition-all">
                     <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary-light/20 to-primary-gray/20 flex items-center justify-center mb-4">
                       <Shield className="w-8 h-8 text-primary-light" />
@@ -160,9 +164,9 @@ export default function Home() {
               <MultisigWorkflow />
 
               {/* 使用场景 */}
-              <div className="glass-card rounded-3xl shadow-2xl p-8 md:p-10">
-                <h2 className="text-3xl font-bold text-white mb-8 text-center">{t('index.scenariosTitle')}</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="glass-card rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 md:p-8 lg:p-10">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-6 sm:mb-8 text-center">{t('index.scenariosTitle')}</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   <div className="p-6 rounded-xl bg-primary-dark/50 border border-primary-light/10">
                     <div className="flex items-center gap-3 mb-3">
                       <Zap className="w-6 h-6 text-primary-light" />
@@ -203,67 +207,69 @@ export default function Home() {
               </div>
 
               {/* CTA */}
-              <div className="glass-card rounded-3xl shadow-2xl p-8 md:p-10 text-center">
-                <h2 className="text-3xl font-bold text-white mb-4">{t('index.ctaTitle')}</h2>
-                <p className="text-primary-gray mb-6 max-w-2xl mx-auto">
+              <div className="glass-card rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 md:p-8 lg:p-10 text-center">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-3 sm:mb-4">{t('index.ctaTitle')}</h2>
+                <p className="text-sm sm:text-base text-primary-gray mb-4 sm:mb-6 max-w-2xl mx-auto px-2">
                   {t('index.ctaDesc')}
                 </p>
                 <div className="flex items-center justify-center gap-4">
-                  <ConnectButton />
+                  <div className="scale-90 sm:scale-100">
+                    <ConnectButton />
+                  </div>
                 </div>
               </div>
             </div>
           ) : (
             <>
               {/* 已连接钱包时显示功能标签页 */}
-              <div className="flex flex-col md:flex-row gap-6">
-                {/* 左侧导航栏 */}
+              <div className="flex flex-col md:flex-row gap-4 sm:gap-6">
+                {/* 左侧导航栏 - 移动端改为横向滚动 */}
                 <div className="flex-shrink-0 w-full md:w-64">
-                  <div className="glass-effect rounded-2xl p-2 md:sticky md:top-24">
-                    <div className="flex flex-col gap-2 min-w-[240px]">
+                  <div className="glass-effect rounded-xl sm:rounded-2xl p-2 md:sticky md:top-24">
+                    <div className="flex flex-row md:flex-col gap-2 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 scrollbar-hide">
                       <button
                         onClick={() => setActiveTab('view')}
-                        className={`flex items-center gap-3 py-4 px-6 rounded-xl font-semibold transition-all w-full ${
+                        className={`flex items-center gap-2 sm:gap-3 py-3 sm:py-4 px-4 sm:px-6 rounded-lg sm:rounded-xl font-semibold transition-all md:w-full whitespace-nowrap min-w-fit ${
                           activeTab === 'view'
                             ? 'bg-gradient-to-r from-primary-light to-primary-gray text-primary-black shadow-lg'
                             : 'text-primary-gray hover:text-white hover:bg-white/5'
                         }`}
                       >
-                        <Eye className="w-5 h-5 flex-shrink-0" />
-                        <span className="whitespace-nowrap">{t('tabs.view')}</span>
+                        <Eye className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                        <span className="text-sm sm:text-base">{t('tabs.view')}</span>
                       </button>
                       <button
                         onClick={() => setActiveTab('transactions')}
-                        className={`flex items-center gap-3 py-4 px-6 rounded-xl font-semibold transition-all w-full ${
+                        className={`flex items-center gap-2 sm:gap-3 py-3 sm:py-4 px-4 sm:px-6 rounded-lg sm:rounded-xl font-semibold transition-all md:w-full whitespace-nowrap min-w-fit ${
                           activeTab === 'transactions'
                             ? 'bg-gradient-to-r from-primary-light to-primary-gray text-primary-black shadow-lg'
                             : 'text-primary-gray hover:text-white hover:bg-white/5'
                         }`}
                       >
-                        <Send className="w-5 h-5 flex-shrink-0" />
-                        <span className="whitespace-nowrap">{t('tabs.transactions')}</span>
+                        <Send className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                        <span className="text-sm sm:text-base">{t('tabs.transactions')}</span>
                       </button>
                       <button
                         onClick={() => setActiveTab('deploy')}
-                        className={`flex items-center gap-3 py-4 px-6 rounded-xl font-semibold transition-all w-full ${
+                        className={`flex items-center gap-2 sm:gap-3 py-3 sm:py-4 px-4 sm:px-6 rounded-lg sm:rounded-xl font-semibold transition-all md:w-full whitespace-nowrap min-w-fit ${
                           activeTab === 'deploy'
                             ? 'bg-gradient-to-r from-primary-light to-primary-gray text-primary-black shadow-lg'
                             : 'text-primary-gray hover:text-white hover:bg-white/5'
                         }`}
                       >
-                        <Plus className="w-5 h-5 flex-shrink-0" />
-                        <span className="whitespace-nowrap">{t('tabs.deploy')}</span>
+                        <Plus className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                        <span className="text-sm sm:text-base">{t('tabs.deploy')}</span>
                       </button>
                       <button
                         onClick={() => setActiveTab('settings')}
-                        className={`flex items-center gap-3 py-4 px-6 rounded-xl font-semibold transition-all w-full ${
+                        className={`flex items-center gap-2 sm:gap-3 py-3 sm:py-4 px-4 sm:px-6 rounded-lg sm:rounded-xl font-semibold transition-all md:w-full whitespace-nowrap min-w-fit ${
                           activeTab === 'settings'
                             ? 'bg-gradient-to-r from-primary-light to-primary-gray text-primary-black shadow-lg'
                             : 'text-primary-gray hover:text-white hover:bg-white/5'
                         }`}
                       >
-                        <Settings className="w-5 h-5 flex-shrink-0" />
-                        <span className="whitespace-nowrap">{t('tabs.settings')}</span>
+                        <Settings className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                        <span className="text-sm sm:text-base">{t('tabs.settings')}</span>
                       </button>
                     </div>
                   </div>
@@ -271,7 +277,7 @@ export default function Home() {
 
                 {/* 右侧内容区域 */}
                 <div className="flex-1 min-w-0">
-                  <div className="glass-card rounded-3xl shadow-2xl p-8 md:p-10">
+                  <div className="glass-card rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 md:p-8 lg:p-10">
                 {activeTab === 'view' ? (
                   <DeployedContractsList 
                     onInitiateTransfer={(contractAddress, chainId) => {
@@ -287,10 +293,10 @@ export default function Home() {
                 ) : activeTab === 'settings' ? (
                   <UserSettings />
                 ) : (
-                  <div className="space-y-6">
-                    <div className="border-b border-primary-light/20 pb-6 mb-8">
-                      <h2 className="text-3xl font-bold text-white mb-3">{t('deploy.title')}</h2>
-                      <p className="text-primary-gray text-lg">{t('deploy.subtitle')}</p>
+                  <div className="space-y-4 sm:space-y-6">
+                    <div className="border-b border-primary-light/20 pb-4 sm:pb-6 mb-6 sm:mb-8">
+                      <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2 sm:mb-3">{t('deploy.title')}</h2>
+                      <p className="text-sm sm:text-base md:text-lg text-primary-gray">{t('deploy.subtitle')}</p>
                     </div>
                     <MultiSigDeployer />
                   </div>

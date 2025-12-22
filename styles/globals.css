@@ -90,4 +90,22 @@
     border-radius: 4px;
     background: transparent;
   }
+
+  /* Mobile responsive utilities */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Touch-friendly button sizes */
+  @media (max-width: 640px) {
+    button, a[role="button"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
 }

@@ -571,7 +571,7 @@ export function TransactionManager({ initialContract, initialChainId }: Transact
 
   if (!isConnected) {
     return (
-      <div className="bg-primary-light/5 border border-primary-light/30 rounded-2xl p-12 text-center">
+      <div className="bg-primary-light/5 border border-primary-light/30 rounded-xl sm:rounded-2xl p-6 sm:p-8 md:p-12 text-center">
         <p className="text-primary-gray">{t('transactions.pleaseConnectWalletFirst') || 'Please connect your wallet first'}</p>
       </div>
     )
@@ -587,7 +587,7 @@ export function TransactionManager({ initialContract, initialChainId }: Transact
         </div>
         <button
           onClick={() => setShowTransferModal(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-light to-primary-gray text-primary-black rounded-xl hover:shadow-lg hover:shadow-primary-light/20 transition-all font-semibold"
+          className="flex items-center gap-2 px-4 sm:px-6 py-3 bg-gradient-to-r from-primary-light to-primary-gray text-primary-black rounded-lg sm:rounded-xl hover:shadow-lg hover:shadow-primary-light/20 transition-all font-semibold text-sm sm:text-base min-h-[44px]"
         >
           <Send className="w-5 h-5" />
           {t('transfer.title') || 'Initiate Transfer'}
@@ -595,7 +595,7 @@ export function TransactionManager({ initialContract, initialChainId }: Transact
       </div>
 
       {/* Tab切换 */}
-      <div className="glass-card rounded-2xl p-6 border-primary-light/30">
+      <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 border-primary-light/30">
         <div className="flex items-center justify-between mb-6 border-b border-primary-light/20">
           <div className="flex items-center gap-4">
           <button
@@ -814,10 +814,10 @@ function TransactionCard({
   })
 
   return (
-    <div className={`glass-card rounded-xl p-5 border transition-all ${
+    <div className={`glass-card rounded-lg sm:rounded-xl p-4 sm:p-5 border transition-all ${
       isExecuted ? 'opacity-75 border-green-500/30' : 'border-primary-light/30 hover:border-primary-light/50'
     }`}>
-      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-3 sm:gap-4">
         <div className="flex-1 space-y-3">
           {/* 交易状态和基本信息 */}
           <div className="flex items-center gap-3 flex-wrap">
