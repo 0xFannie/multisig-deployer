@@ -21,7 +21,6 @@ import {
   phantomWallet,
   okxWallet,
   backpackWallet,
-  baseAccount,
   bitgetWallet,
   gateWallet,
   imTokenWallet,
@@ -72,13 +71,6 @@ const supportedChains = [
   goerli
 ] as const
 
-// 配置 Base Account (formerly Coinbase Wallet)
-// 根据 RainbowKit 文档，baseAccount 是一个钱包对象，可以直接使用
-// 如果需要配置 preference，可以在使用前设置（如果支持的话）
-// 注意：某些版本的 baseAccount 可能不支持直接设置 preference
-// 如果 baseAccount 未定义或不可用，我们将跳过它
-const baseAccountWallet = baseAccount
-
 // 创建自定义钱包连接器
 const connectors = connectorsForWallets(
   [
@@ -88,7 +80,6 @@ const connectors = connectorsForWallets(
         metaMaskWallet,
         phantomWallet,
         okxWallet,
-        ...(baseAccountWallet ? [baseAccountWallet] : []), // 如果 baseAccount 可用则添加
         uniswapWallet,
       ],
     },
