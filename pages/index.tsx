@@ -299,10 +299,20 @@ export default function Home() {
 }
 
 export async function getServerSideProps(context: any) {
-  const { locale } = context
-  return {
-    props: {
-      ...(await serverSideTranslations(locale || 'zh-CN', ['common'])),
-    },
+  try {
+    const { locale } = context
+    return {
+      props: {
+        ...(await serverSideTranslations(locale || 'zh-CN', ['common'])),
+      },
+    }
+  } catch (error: any) {
+    console.error('Error in getServerSideProps:', error)
+    // 返回默认翻译，避免页面崩溃
+    return {
+      props: {
+        ...(await serverSideTranslations('zh-CN', ['common'])),
+      },
+    }
   }
 }
