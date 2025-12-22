@@ -1,7 +1,7 @@
 ﻿import type { AppProps } from 'next/app'
 import { WagmiProvider } from 'wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { RainbowKitProvider, darkTheme, Locale } from '@rainbow-me/rainbowkit'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/router'
 import { wagmiConfig, initWeb3Modal } from '../lib/web3Config'
 import { Toaster } from 'react-hot-toast'
@@ -11,6 +11,39 @@ import { ErrorBoundary } from '../components/ErrorBoundary'
 import { Footer } from '../components/Footer'
 import '@rainbow-me/rainbowkit/styles.css'
 import '../styles/globals.css'
+
+// 动态导入 RainbowKitProvider，禁用 SSR 以避免服务器端模块兼容性问题
+const DynamicRainbowKitProvider = dynamic(
+  async () => {
+    const rainbowkit = await import('@rainbow-me/rainbowkit')
+    const { RainbowKitProvider, darkTheme } = rainbowkit
+    
+    return function RainbowKitWrapper({ children, locale }: { children: React.ReactNode; locale: string }) {
+      return (
+        <RainbowKitProvider
+          theme={darkTheme({
+            accentColor: '#6366f1',
+            accentColorForeground: 'white',
+            borderRadius: 'large',
+            fontStack: 'system',
+          })}
+          locale={locale as any}
+          coolMode
+          showRecentTransactions={true}
+          initialChain={undefined}
+          appInfo={{
+            appName: 'MultiSig Wallet Deployer',
+          }}
+        >
+          {children}
+        </RainbowKitProvider>
+      )
+    }
+  },
+  { ssr: false }
+)
+
+type Locale = 'zh-CN' | 'en-US'
 
 function App({ Component, pageProps }: AppProps) {
   const router = useRouter()
@@ -22,6 +55,7 @@ function App({ Component, pageProps }: AppProps) {
       },
     },
   }))
+  const [mounted, setMounted] = useState(false)
 
   // 获取当前 locale，映射到 RainbowKit 支持的格式
   const getRainbowKitLocale = (): Locale => {
@@ -38,6 +72,10 @@ function App({ Component, pageProps }: AppProps) {
   }
 
   const rainbowKitLocale = getRainbowKitLocale()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     // 检查 MetaMask 扩展是否可用
@@ -193,42 +231,53 @@ function App({ Component, pageProps }: AppProps) {
   return (
     <WagmiProvider config={wagmiConfig} reconnectOnMount={false}>
       <QueryClientProvider client={queryClient}>
-          <RainbowKitProvider
-            theme={darkTheme({
-              accentColor: '#6366f1', // primary-light color
-              accentColorForeground: 'white',
-              borderRadius: 'large',
-              fontStack: 'system',
-            })}
-            locale={rainbowKitLocale}
-            coolMode
-            showRecentTransactions={true}
-            initialChain={undefined}
-            appInfo={{
-              appName: 'MultiSig Wallet Deployer',
-            }}
-          >
-          <ErrorBoundary>
-            <div className="min-h-screen flex flex-col">
-              <div className="flex-1">
-                <Component {...pageProps} />
+        {mounted ? (
+          <DynamicRainbowKitProvider locale={rainbowKitLocale}>
+            <ErrorBoundary>
+              <div className="min-h-screen flex flex-col">
+                <div className="flex-1">
+                  <Component {...pageProps} />
+                </div>
+                <Footer />
               </div>
-              <Footer />
-            </div>
-          </ErrorBoundary>
-          <Toaster 
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: '#363636',
-                color: '#fff',
-              },
-              success: { duration: 3000 },
-              error: { duration: 5000 },
-            }}
-          />
-        </RainbowKitProvider>
+            </ErrorBoundary>
+            <Toaster 
+              position="top-right"
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  background: '#363636',
+                  color: '#fff',
+                },
+                success: { duration: 3000 },
+                error: { duration: 5000 },
+              }}
+            />
+          </DynamicRainbowKitProvider>
+        ) : (
+          <>
+            <ErrorBoundary>
+              <div className="min-h-screen flex flex-col">
+                <div className="flex-1">
+                  <Component {...pageProps} />
+                </div>
+                <Footer />
+              </div>
+            </ErrorBoundary>
+            <Toaster 
+              position="top-right"
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  background: '#363636',
+                  color: '#fff',
+                },
+                success: { duration: 3000 },
+                error: { duration: 5000 },
+              }}
+            />
+          </>
+        )}
       </QueryClientProvider>
     </WagmiProvider>
   )

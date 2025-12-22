@@ -20,7 +20,22 @@ const nextConfig = {
       ...config.resolve.alias,
       '@react-native-async-storage/async-storage': false,
     }
+    
+    // 处理 vanilla-extract/sprinkles 的 CommonJS/ESM 兼容性问题
+    if (isServer) {
+      config.externals = config.externals || []
+      // 在服务器端，将 RainbowKit 相关的模块标记为外部依赖或使用 CommonJS 解析
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        '@vanilla-extract/sprinkles/createUtils': require.resolve('@vanilla-extract/sprinkles/createUtils'),
+      }
+    }
+    
     return config
+  },
+  // 实验性功能：允许服务器端组件使用 ESM
+  experimental: {
+    serverComponentsExternalPackages: ['@rainbow-me/rainbowkit'],
   },
 };
 
