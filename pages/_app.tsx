@@ -3,12 +3,13 @@ import { WagmiProvider } from 'wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/router'
-import { wagmiConfig, initWeb3Modal } from '../lib/web3Config'
+import { wagmiConfig, initWeb3Modal, getWagmiConfig } from '../lib/web3Config'
 import { Toaster } from 'react-hot-toast'
 import { useEffect, useState } from 'react'
 import { appWithTranslation } from 'next-i18next'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { Footer } from '../components/Footer'
+import type { Config } from 'wagmi'
 import '@rainbow-me/rainbowkit/styles.css'
 import '../styles/globals.css'
 
@@ -56,6 +57,7 @@ function App({ Component, pageProps }: AppProps) {
     },
   }))
   const [mounted, setMounted] = useState(false)
+  const [config, setConfig] = useState<Config>(wagmiConfig)
 
   // 获取当前 locale，映射到 RainbowKit 支持的格式
   const getRainbowKitLocale = (): Locale => {
@@ -75,6 +77,12 @@ function App({ Component, pageProps }: AppProps) {
 
   useEffect(() => {
     setMounted(true)
+    // 在客户端加载完整的 wagmi 配置（包含 RainbowKit 连接器）
+    if (typeof window !== 'undefined') {
+      getWagmiConfig().then((fullConfig) => {
+        setConfig(fullConfig)
+      }).catch(console.error)
+    }
   }, [])
 
   useEffect(() => {
@@ -229,7 +237,7 @@ function App({ Component, pageProps }: AppProps) {
   }, [])
   
   return (
-    <WagmiProvider config={wagmiConfig} reconnectOnMount={false}>
+    <WagmiProvider config={config} reconnectOnMount={false}>
       <QueryClientProvider client={queryClient}>
         {mounted ? (
           <DynamicRainbowKitProvider locale={rainbowKitLocale}>
