@@ -40,10 +40,11 @@ if (typeof window !== 'undefined') {
       supabase = createClient(supabaseUrl, supabaseAnonKey)
     } catch (error) {
       console.error('Failed to create Supabase client:', error)
-      throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable')
+      // 不抛出错误，允许应用继续运行（API 路由会检查 supabase 是否为 null）
     }
   } else {
-    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable')
+    console.warn('Supabase environment variables not configured (server-side)')
+    // 不抛出错误，允许应用继续运行
   }
 }
 

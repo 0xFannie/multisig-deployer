@@ -301,18 +301,28 @@ export default function Home() {
 export async function getServerSideProps(context: any) {
   try {
     const { locale } = context
+    const translations = await serverSideTranslations(locale || 'zh-CN', ['common'])
     return {
       props: {
-        ...(await serverSideTranslations(locale || 'zh-CN', ['common'])),
+        ...translations,
       },
     }
   } catch (error: any) {
     console.error('Error in getServerSideProps:', error)
-    // 返回默认翻译，避免页面崩溃
-    return {
-      props: {
-        ...(await serverSideTranslations('zh-CN', ['common'])),
-      },
+    // 如果翻译加载失败，尝试使用默认语言
+    try {
+      const fallbackTranslations = await serverSideTranslations('zh-CN', ['common'])
+      return {
+        props: {
+          ...fallbackTranslations,
+        },
+      }
+    } catch (fallbackError: any) {
+      console.error('Fallback translation also failed:', fallbackError)
+      // 如果默认语言也失败，返回空 props（页面会使用硬编码的文本）
+      return {
+        props: {},
+      }
     }
   }
 }
