@@ -36,6 +36,7 @@ contract MultiSigWallet {
         bytes data;
         bool executed;
         uint256 numConfirmations;
+        uint256 expirationTime; // 过期时间（Unix 时间戳，0 表示永不过期）
     }
 
     // 交易ID => 所有者 => 是否确认
@@ -57,6 +58,15 @@ contract MultiSigWallet {
 
     modifier notExecuted(uint256 _txIndex) {
         require(!transactions[_txIndex].executed, "tx already executed");
+        _;
+    }
+
+    modifier notExpired(uint256 _txIndex) {
+        Transaction storage transaction = transactions[_txIndex];
+        require(
+            transaction.expirationTime == 0 || block.timestamp <= transaction.expirationTime,
+            "tx expired"
+        );
         _;
     }
 
@@ -102,12 +112,19 @@ contract MultiSigWallet {
      * @param _to 目标地址
      * @param _value 转账金额
      * @param _data 调用数据
+     * @param _expirationTime 过期时间（Unix 时间戳，0 表示永不过期）
      */
     function submitTransaction(
         address _to,
         uint256 _value,
-        bytes memory _data
+        bytes memory _data,
+        uint256 _expirationTime
     ) public onlyOwner {
+        require(
+            _expirationTime == 0 || _expirationTime > block.timestamp,
+            "expiration time must be in the future"
+        );
+
         uint256 txIndex = transactions.length;
 
         transactions.push(
@@ -116,7 +133,8 @@ contract MultiSigWallet {
                 value: _value,
                 data: _data,
                 executed: false,
-                numConfirmations: 0
+                numConfirmations: 0,
+                expirationTime: _expirationTime
             })
         );
 
@@ -132,6 +150,7 @@ contract MultiSigWallet {
         onlyOwner
         txExists(_txIndex)
         notExecuted(_txIndex)
+        notExpired(_txIndex)
         notConfirmed(_txIndex)
     {
         Transaction storage transaction = transactions[_txIndex];
@@ -150,6 +169,7 @@ contract MultiSigWallet {
         onlyOwner
         txExists(_txIndex)
         notExecuted(_txIndex)
+        notExpired(_txIndex)
     {
         Transaction storage transaction = transactions[_txIndex];
 
@@ -213,7 +233,8 @@ contract MultiSigWallet {
             uint256 value,
             bytes memory data,
             bool executed,
-            uint256 numConfirmations
+            uint256 numConfirmations,
+            uint256 expirationTime
         )
     {
         Transaction storage transaction = transactions[_txIndex];
@@ -223,7 +244,8 @@ contract MultiSigWallet {
             transaction.value,
             transaction.data,
             transaction.executed,
-            transaction.numConfirmations
+            transaction.numConfirmations,
+            transaction.expirationTime
         );
     }
 }

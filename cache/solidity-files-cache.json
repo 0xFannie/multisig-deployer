@@ -35,6 +35,41 @@
       "artifacts": [
         "MultiSigWallet"
       ]
+    },
+    "C:\\Users\\Fannieku\\Desktop\\Fannie\\Multi-Sign\\contracts\\MultiSigWallet.sol": {
+      "lastModificationDate": 1766384870294,
+      "contentHash": "6984332a8c16ac2c41eafc822a4812aa",
+      "sourceName": "contracts/MultiSigWallet.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.19"
+      ],
+      "artifacts": [
+        "MultiSigWallet"
+      ]
     }
   }
 }

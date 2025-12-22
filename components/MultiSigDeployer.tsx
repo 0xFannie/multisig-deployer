@@ -2,9 +2,12 @@ import { useState, useEffect } from 'react'
 import { useAccount, useWalletClient, usePublicClient, useChainId } from 'wagmi'
 import { Plus, Trash2, AlertCircle, CheckCircle, Loader, Copy, ExternalLink, Share2 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useTranslation } from 'next-i18next'
 import MultiSigWalletArtifact from '../artifacts/contracts/MultiSigWallet.sol/MultiSigWallet.json'
+import { formatEther, parseEther } from 'viem'
 
 export function MultiSigDeployer() {
+  const { t } = useTranslation('common')
   const { address, isConnected } = useAccount()
   const { data: walletClient } = useWalletClient()
   const publicClient = usePublicClient()
@@ -55,9 +58,9 @@ export function MultiSigDeployer() {
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      toast.success('地址已复制到剪贴板！', { icon: '📋' })
+      toast.success(t('deploy.addressCopied'), { icon: '📋' })
     } catch (error) {
-      toast.error('复制失败，请手动复制')
+      toast.error(t('deploy.copyFailed'))
     }
   }
 
@@ -66,12 +69,12 @@ export function MultiSigDeployer() {
     try {
       const shareUrl = `${window.location.origin}?contract=${addr}&chain=${chainId}&tab=transactions`
       await navigator.clipboard.writeText(shareUrl)
-      toast.success('分享链接已复制！其他所有者可以通过此链接查看和管理交易', { 
+      toast.success(t('deploy.linkCopied'), { 
         icon: '🔗',
         duration: 5000
       })
     } catch (error) {
-      toast.error('复制失败')
+      toast.error(t('deploy.copyFailed'))
     }
   }
 
@@ -111,43 +114,48 @@ export function MultiSigDeployer() {
     const validOwners = owners.filter(o => o.trim() !== '')
     
     if (validOwners.length === 0) {
-      toast.error('请至少添加一个所有者地址')
+      toast.error(t('deploy.atLeastOneOwner'))
       return
     }
 
     const invalidOwners = validOwners.filter(o => !isValidAddress(o))
     if (invalidOwners.length > 0) {
-      toast.error('存在无效的地址格式')
+      toast.error(t('deploy.invalidAddressFormat'))
       return
     }
 
     if (requiredConfirmations < 1 || requiredConfirmations > validOwners.length) {
-      toast.error('所需确认数必须在 1 和所有者数量之间')
+      toast.error(t('deploy.confirmationsOutOfRange'))
       return
     }
 
     if (!isConnected || !address) {
-      toast.error('请先连接钱包')
+      toast.error(t('deploy.pleaseConnectWallet'))
       return
     }
 
     // 等待客户端就绪
     if (!publicClient) {
-      toast.error('网络连接未就绪，请稍后重试')
+      toast.error(t('deploy.networkNotReady'))
       return
     }
 
     if (!walletClient) {
-      toast.error('正在初始化钱包连接，请稍等片刻后重试')
+      toast.error(t('deploy.walletInitializing'))
       return
     }
 
     setIsDeploying(true)
-    const toastId = toast.loading('正在准备部署合约...')
+    const toastId = toast.loading(t('deploy.preparing'))
+
+    // 在 try 块外部声明变量，以便在 catch 块中访问
+    let balanceInEth = '0'
+    let bytecode: `0x${string}` | undefined
+    let gasEstimate: bigint | undefined
 
     try {
       // 获取合约的 bytecode 和 ABI
-      const bytecode = MultiSigWalletArtifact.bytecode as `0x${string}`
+      bytecode = MultiSigWalletArtifact.bytecode as `0x${string}`
       const abi = MultiSigWalletArtifact.abi
 
       console.log('部署参数:', {
@@ -156,17 +164,98 @@ export function MultiSigDeployer() {
         bytecodeLength: bytecode.length
       })
 
-      toast.loading('等待用户确认交易...', { id: toastId })
+      toast.loading(t('deploy.waitingUser'), { id: toastId })
+
+      // 检查账户余额
+      const balance = await publicClient.getBalance({
+        address: address as `0x${string}`,
+      })
+      balanceInEth = formatEther(balance)
+      const nativeToken = chainId === 137 ? 'POL' : 'ETH'
+      console.log('账户余额:', balance.toString(), 'wei', `(${balanceInEth} ${nativeToken})`)
+      console.log('余额检查: 余额充足，可以继续部署')
+      
+      // 检查余额是否足够（至少需要 0.01 ETH/POL）
+      const minBalance = parseEther('0.01')
+      if (balance < minBalance) {
+        throw new Error(`Insufficient balance. You have ${balanceInEth} ${nativeToken}, but need at least 0.01 ${nativeToken} for deployment.`)
+      }
+
+      // 验证 bytecode
+      if (!bytecode || bytecode === '0x') {
+        throw new Error('Invalid bytecode. Please rebuild the contract.')
+      }
+
+      // 验证参数
+      if (validOwners.length === 0) {
+        throw new Error('No valid owners provided')
+      }
+      if (requiredConfirmations < 1 || requiredConfirmations > validOwners.length) {
+        throw new Error(`Invalid confirmation requirement: ${requiredConfirmations} (must be between 1 and ${validOwners.length})`)
+      }
+
+      console.log('准备部署合约，参数验证通过')
+
+      // 尝试手动估算 gas（如果失败，让钱包自动估算）
+      try {
+        console.log('正在估算 Gas...')
+        // 使用 encodeDeployData 准备部署数据
+        const { encodeDeployData } = await import('viem')
+        const deployData = encodeDeployData({
+          abi,
+          bytecode,
+          args: [validOwners, BigInt(requiredConfirmations)],
+        })
+        console.log('部署数据已编码，长度:', deployData.length)
+        
+        // 估算 gas
+        gasEstimate = await publicClient.estimateGas({
+          account: address as `0x${string}`,
+          data: deployData,
+          to: undefined, // 部署合约时 to 为 undefined
+        })
+        console.log('Gas 估算成功:', gasEstimate.toString())
+        // 增加 20% 的缓冲
+        gasEstimate = (gasEstimate * 120n) / 100n
+        console.log('Gas 估算（含缓冲）:', gasEstimate.toString())
+      } catch (gasError: any) {
+        console.warn('Gas 估算失败，将使用钱包自动估算:', gasError)
+        console.warn('Gas 估算错误详情:', {
+          message: gasError.message,
+          code: gasError.code,
+          name: gasError.name,
+        })
+        // 如果估算失败，继续使用钱包自动估算
+      }
 
       // 部署合约
-      const hash = await walletClient.deployContract({
+      const deployOptions: any = {
         abi,
         bytecode,
         args: [validOwners, BigInt(requiredConfirmations)],
         account: address as `0x${string}`,
+      }
+      
+      // 如果成功估算 gas，使用估算值
+      if (gasEstimate) {
+        deployOptions.gas = gasEstimate
+      }
+      
+      console.log('开始部署合约，选项:', {
+        hasGas: !!deployOptions.gas,
+        gas: deployOptions.gas?.toString(),
+        ownersCount: validOwners.length,
+        requiredConfirmations,
+        bytecodeLength: bytecode.length,
+        network: chainId,
+        account: address,
       })
 
-      toast.loading('合约部署中，等待确认...', { id: toastId })
+      console.log('调用 walletClient.deployContract...')
+      const hash = await walletClient.deployContract(deployOptions)
+      console.log('部署交易已提交，哈希:', hash)
+
+      toast.loading(t('deploy.deployingTx'), { id: toastId })
       console.log('部署交易哈希:', hash)
 
       // 等待交易确认
@@ -191,8 +280,11 @@ export function MultiSigDeployer() {
         contracts.unshift(newContract)
         localStorage.setItem('multisig_contracts', JSON.stringify(contracts.slice(0, 10)))
         
+        // 触发自定义事件，通知其他组件更新
+        window.dispatchEvent(new Event('contractsUpdated'))
+        
         toast.success(
-          `合约部署成功！\n地址: ${receipt.contractAddress.slice(0, 6)}...${receipt.contractAddress.slice(-4)}`,
+          `${t('deploy.deploymentSuccess')}\n${t('deploy.addressLabel')} ${receipt.contractAddress.slice(0, 6)}...${receipt.contractAddress.slice(-4)}`,
           { id: toastId, duration: 5000 }
         )
 
@@ -203,23 +295,85 @@ export function MultiSigDeployer() {
           gasUsed: receipt.gasUsed.toString()
         })
       } else {
-        throw new Error('未能获取合约地址')
+        throw new Error(t('deploy.failedToGetAddress'))
       }
       
     } catch (error: any) {
       console.error('❌ 部署失败:', error)
+      console.error('错误详情:', {
+        message: error.message,
+        code: error.code,
+        name: error.name,
+        shortMessage: error.shortMessage,
+        cause: error.cause,
+        data: error.data,
+        stack: error.stack,
+      })
       
-      let errorMessage = '部署失败'
+      // 提取更详细的错误信息
+      let errorMessage = t('deploy.deployFailed')
+      let errorDetails = ''
       
-      if (error.message?.includes('User rejected')) {
-        errorMessage = '用户取消了交易'
-      } else if (error.message?.includes('insufficient funds')) {
-        errorMessage = '账户余额不足'
+      // 检查错误代码
+      const errorCode = error.code || error.cause?.code
+      
+      if (error.message?.includes('User rejected') || errorCode === 4001) {
+        errorMessage = t('deploy.userRejected')
+      } else if (errorCode === -32003 || errorCode === '32003') {
+        // RPC 节点拒绝交易（-32003）
+        errorMessage = t('deploy.transactionCreationFailed') || 'Transaction creation failed. The RPC node rejected the transaction.'
+        errorDetails = 'This usually means:\n1. Insufficient balance for gas fees\n2. Network congestion\n3. Invalid contract parameters\n\nPlease check your wallet balance and try again.'
+      } else if (error.message?.includes('insufficient funds') || error.message?.includes('insufficient balance') || error.message?.includes('Insufficient balance')) {
+        errorMessage = t('deploy.insufficientFunds')
+        if (error.message.includes('You have')) {
+          errorDetails = error.message
+        }
+      } else if (error.shortMessage?.includes('Transaction creation failed') || error.message?.includes('Transaction creation failed')) {
+        // 处理 viem 的 Transaction creation failed 错误
+        const baseMessage = t('deploy.transactionCreationFailed')
+        errorMessage = baseMessage || 'Transaction creation failed. Please check your wallet balance and network connection.'
+        
+        // 添加更多诊断信息
+        if (error.cause) {
+          const causeMessage = error.cause?.message || error.cause?.shortMessage || ''
+          const causeCode = error.cause?.code
+          if (causeCode === -32003 || causeCode === '32003') {
+            errorDetails = 'RPC node rejected the transaction. This may be due to:\n- Insufficient balance\n- Network issues\n- Invalid parameters'
+          } else if (causeMessage) {
+            errorDetails = `Details: ${causeMessage}`
+          }
+        }
       } else if (error.message) {
         errorMessage = error.message
+      } else if (error.shortMessage) {
+        errorMessage = error.shortMessage
       }
       
-      toast.error(errorMessage, { id: toastId })
+      // 显示错误消息
+      if (errorDetails) {
+        toast.error(`${errorMessage}\n${errorDetails}`, { id: toastId, duration: 10000 })
+      } else {
+        toast.error(errorMessage, { id: toastId, duration: 5000 })
+      }
+      
+      // 在控制台输出详细的诊断信息
+      const diagnosticInfo = {
+        errorCode: error.code || error.cause?.code,
+        errorName: error.name,
+        network: chainId,
+        networkName: chainId === 137 ? 'Polygon' : chainId === 1 ? 'Ethereum' : `Chain ${chainId}`,
+        balance: balanceInEth,
+        balanceWei: balanceInEth ? parseEther(balanceInEth).toString() : 'unknown',
+        ownersCount: validOwners.length,
+        requiredConfirmations,
+        bytecodeLength: bytecode?.length || 0,
+        hasGasEstimate: !!gasEstimate,
+        gasEstimate: gasEstimate?.toString(),
+        account: address,
+        validOwners: validOwners,
+      }
+      console.error('部署失败诊断信息:', diagnosticInfo)
+      console.error('完整错误对象:', error)
     } finally {
       setIsDeploying(false)
     }
@@ -241,10 +395,10 @@ export function MultiSigDeployer() {
           <div className="flex justify-between items-center mb-6">
             <div>
               <label className="text-white font-semibold text-xl block mb-1">
-                所有者地址
+                {t('deploy.owners')}
               </label>
               <p className="text-primary-gray text-sm">
-                已添加 <span className="text-primary-light font-semibold">{owners.filter(o => o.trim()).length}</span> 个所有者
+                {t('deploy.ownersCount', { count: owners.filter(o => o.trim()).length })}
               </p>
             </div>
             <button
@@ -252,7 +406,7 @@ export function MultiSigDeployer() {
               className="flex items-center gap-2 px-5 py-2.5 bg-primary-light/10 text-primary-light rounded-xl hover:bg-primary-light/20 transition-all border border-primary-light/30 font-medium"
             >
               <Plus className="w-5 h-5" />
-              添加地址
+              {t('deploy.addAddress')}
             </button>
           </div>
 
@@ -273,7 +427,7 @@ export function MultiSigDeployer() {
                   disabled={!isConnected}
                   className="px-5 py-4 bg-primary-gray/20 text-primary-gray rounded-xl hover:bg-primary-gray/30 hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap font-medium border border-primary-gray/30"
                 >
-                  使用当前
+                  {t('deploy.useCurrent')}
                 </button>
                 {owners.length > 1 && (
                   <button
@@ -291,18 +445,18 @@ export function MultiSigDeployer() {
         {/* Required Confirmations Slider */}
         <div>
           <label className="text-white font-semibold text-xl block mb-4">
-            所需确认比例
+            {t('deploy.requiredConfirmations')}
           </label>
           
           {/* Percentage Display */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-baseline gap-2">
               <span className="text-4xl font-bold text-primary-light">{confirmationPercentage}%</span>
-              <span className="text-primary-gray text-sm">确认比例</span>
+              <span className="text-primary-gray text-sm">{t('deploy.confirmationPercentage')}</span>
             </div>
             <div className="text-right">
               <div className="text-2xl font-bold text-white">{requiredConfirmations} / {owners.filter(o => o.trim()).length}</div>
-              <div className="text-primary-gray text-xs">需要确认的所有者</div>
+              <div className="text-primary-gray text-xs">{t('deploy.requiredOwners')}</div>
             </div>
           </div>
 
@@ -339,10 +493,10 @@ export function MultiSigDeployer() {
           </div>
 
           <p className="text-primary-gray text-sm mt-4 bg-primary-light/5 px-4 py-3 rounded-lg border border-primary-light/10">
-            💡 设置为 <span className="text-primary-light font-semibold">{confirmationPercentage}%</span> 意味着执行交易需要 <span className="text-white font-semibold">{requiredConfirmations}</span> 个所有者确认
-            {confirmationPercentage === 100 && <span className="text-yellow-400"> (需要所有人同意)</span>}
-            {confirmationPercentage >= 67 && confirmationPercentage < 100 && <span className="text-green-400"> (超过2/3，高安全性)</span>}
-            {confirmationPercentage === 50 && <span className="text-blue-400"> (简单多数)</span>}
+            💡 {t('deploy.percentageTip', { percentage: confirmationPercentage, required: requiredConfirmations })}
+            {confirmationPercentage === 100 && <span className="text-yellow-400">{t('deploy.percentage100')}</span>}
+            {confirmationPercentage >= 67 && confirmationPercentage < 100 && <span className="text-green-400">{t('deploy.percentage67')}</span>}
+            {confirmationPercentage === 50 && <span className="text-blue-400">{t('deploy.percentage50')}</span>}
           </p>
         </div>
 
@@ -353,23 +507,23 @@ export function MultiSigDeployer() {
               <AlertCircle className="w-6 h-6 text-primary-light" />
             </div>
             <div className="text-sm">
-              <p className="font-semibold mb-3 text-white text-base">部署说明</p>
+              <p className="font-semibold mb-3 text-white text-base">{t('deploy.deployInstructions')}</p>
               <ul className="space-y-2 text-primary-gray">
                 <li className="flex items-start gap-2">
                   <span className="text-primary-light mt-0.5">•</span>
-                  <span>确保所有所有者地址正确无误</span>
+                  <span>{t('deploy.instruction1')}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary-light mt-0.5">•</span>
-                  <span>部署后无法修改所有者和确认数要求</span>
+                  <span>{t('deploy.instruction2')}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary-light mt-0.5">•</span>
-                  <span>部署需要消耗 Gas 费用</span>
+                  <span>{t('deploy.instruction3')}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary-light mt-0.5">•</span>
-                  <span>建议先在测试网测试</span>
+                  <span>{t('deploy.instruction4')}</span>
                 </li>
               </ul>
             </div>
@@ -386,11 +540,11 @@ export function MultiSigDeployer() {
           {isDeploying ? (
             <>
               <Loader className="w-6 h-6 animate-spin" />
-              部署中...
+              {t('deploy.deploying')}
             </>
           ) : (
             <>
-              <span>部署多签钱包</span>
+              <span>{t('deploy.deployWallet')}</span>
               <Plus className="w-5 h-5" />
             </>
           )}
@@ -405,7 +559,7 @@ export function MultiSigDeployer() {
                   <CheckCircle className="w-6 h-6 text-green-400" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-green-400 font-semibold mb-3 text-lg">部署成功！</p>
+                  <p className="text-green-400 font-semibold mb-3 text-lg">{t('deploy.deploySuccess')}</p>
                   <div className="bg-primary-black/50 rounded-lg p-3 border border-green-500/30">
                     <p className="text-white font-mono text-sm break-all">
                       {deployedAddress}
@@ -421,7 +575,7 @@ export function MultiSigDeployer() {
                   className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg transition-all border border-green-500/30 hover:border-green-500/50 font-medium"
                 >
                   <Share2 className="w-4 h-4" />
-                  <span>分享给其他所有者</span>
+                  <span>{t('deploy.shareLink')}</span>
                 </button>
 
                 <button
@@ -429,7 +583,7 @@ export function MultiSigDeployer() {
                   className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-light/20 hover:bg-primary-light/30 text-primary-light rounded-lg transition-all border border-primary-light/30 hover:border-primary-light/50 font-medium"
                 >
                   <Copy className="w-4 h-4" />
-                  <span>复制地址</span>
+                  <span>{t('deploy.copyAddress')}</span>
                 </button>
                 
                 <button
@@ -437,7 +591,7 @@ export function MultiSigDeployer() {
                   className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-all border border-blue-500/30 hover:border-blue-500/50 font-medium"
                 >
                   <ExternalLink className="w-4 h-4" />
-                  <span>在区块链浏览器查看</span>
+                  <span>{t('deploy.viewOnExplorer')}</span>
                 </button>
               </div>
               
@@ -445,7 +599,7 @@ export function MultiSigDeployer() {
               <div className="pl-14 pr-4">
                 <div className="bg-primary-light/5 rounded-lg p-4 border border-primary-light/20">
                   <p className="text-sm text-primary-gray">
-                    💡 <span className="text-white font-medium">提示：</span>点击"分享给其他所有者"复制链接，发送给钱包 B 和 C 的所有者。他们打开链接后，就能看到这个多签钱包并管理交易。
+                    💡 <span className="text-white font-medium">{t('deploy.tip')}：</span>{t('deploy.shareTip')}
                   </p>
                 </div>
               </div>

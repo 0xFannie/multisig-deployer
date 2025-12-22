@@ -1,9 +1,12 @@
 /** @type {import('next').NextConfig} */
-const { i18n } = require('./next-i18next.config')
-
 const nextConfig = {
   reactStrictMode: true,
-  i18n,
+  // Next.js i18n 路由配置（next-i18next 需要此配置）
+  i18n: {
+    locales: ['zh-CN', 'en'],
+    defaultLocale: 'zh-CN',
+    localeDetection: false, // 禁用自动检测，由 next-i18next 处理
+  },
 };
 
 module.exports = nextConfig;

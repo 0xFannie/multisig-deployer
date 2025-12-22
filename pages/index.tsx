@@ -1,92 +1,35 @@
 ﻿import Head from 'next/head'
 import { useState, useEffect } from 'react'
-import { useAccount, useConnect, useDisconnect, useChainId, useSwitchChain } from 'wagmi'
-import { Wallet, Eye, Plus, Send, ChevronDown, Check } from 'lucide-react'
+import { useAccount, useChainId, useSwitchChain, useConnect, useConnectors } from 'wagmi'
+import { ConnectButton } from '@rainbow-me/rainbowkit'
+import { Eye, Plus, Send, Shield, Users, Lock, Settings, Zap } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { useTranslation } from 'next-i18next'
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
-import { MultiSigDeployer } from '../components/MultiSigDeployer'
-import { MultiSigWalletViewer } from '../components/MultiSigWalletViewer'
-import { TransactionManager } from '../components/TransactionManager'
-import { 
-  mainnet, 
-  polygon, 
-  bsc, 
-  arbitrum, 
-  optimism, 
-  avalanche, 
-  fantom, 
-  base, 
-  linea,
-  zkSync,
-  scroll,
-  polygonZkEvm,
-  sepolia,
-  goerli
-} from 'wagmi/chains'
 
-// 支持的网络配置
-const SUPPORTED_NETWORKS = [
-  // Layer 1 主网
-  { id: mainnet.id, name: 'Ethereum', icon: '⟠', color: 'text-blue-400', type: 'mainnet' },
-  { id: polygon.id, name: 'Polygon', icon: '⬣', color: 'text-purple-400', type: 'mainnet' },
-  { id: bsc.id, name: 'BNB Chain', icon: '◆', color: 'text-yellow-400', type: 'mainnet' },
-  { id: avalanche.id, name: 'Avalanche', icon: '▲', color: 'text-red-400', type: 'mainnet' },
-  { id: fantom.id, name: 'Fantom', icon: '◈', color: 'text-blue-300', type: 'mainnet' },
-  
-  // Layer 2
-  { id: arbitrum.id, name: 'Arbitrum One', icon: '◉', color: 'text-blue-500', type: 'layer2' },
-  { id: optimism.id, name: 'Optimism', icon: '●', color: 'text-red-500', type: 'layer2' },
-  { id: base.id, name: 'Base', icon: '🔵', color: 'text-blue-600', type: 'layer2' },
-  
-  // zkEVM
-  { id: zkSync.id, name: 'zkSync Era', icon: '⚡', color: 'text-purple-500', type: 'zk' },
-  { id: scroll.id, name: 'Scroll', icon: '📜', color: 'text-orange-400', type: 'zk' },
-  { id: polygonZkEvm.id, name: 'Polygon zkEVM', icon: '⬢', color: 'text-purple-600', type: 'zk' },
-  { id: linea.id, name: 'Linea', icon: '▰', color: 'text-cyan-400', type: 'zk' },
-  
-  // 测试网
-  { id: sepolia.id, name: 'Sepolia', icon: '🧪', color: 'text-green-400', type: 'testnet' },
-  { id: goerli.id, name: 'Goerli', icon: '🧪', color: 'text-green-500', type: 'testnet' },
-]
+// Add LanguageSwitcher to the header
+import { MultiSigDeployer } from '../components/MultiSigDeployer'
+import { TransactionManager } from '../components/TransactionManager'
+import { DeployedContractsList } from '../components/DeployedContractsList'
+import { UserSettings } from '../components/UserSettings'
+import MultisigWorkflow from '../components/MultisigWorkflow'
 
 export default function Home() {
-  const { t } = useTranslation('common')
+  const { t, ready } = useTranslation('common')
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
-  const [activeTab, setActiveTab] = useState<'view' | 'deploy' | 'transactions'>('view')
-  const [showNetworkMenu, setShowNetworkMenu] = useState(false)
+  const [activeTab, setActiveTab] = useState<'view' | 'deploy' | 'transactions' | 'settings'>('view')
   const [urlContract, setUrlContract] = useState<string>('')
+  const [selectedContract, setSelectedContract] = useState<{ address: string; chainId: number } | null>(null)
   const { address, isConnected } = useAccount()
-  const { connect, connectors } = useConnect()
-  const { disconnect } = useDisconnect()
   const chainId = useChainId()
   const { switchChain } = useSwitchChain()
-
-  // 获取当前网络信息
-  const getCurrentNetwork = () => {
-    return SUPPORTED_NETWORKS.find(net => net.id === chainId) || {
-      id: chainId,
-      name: '未知网络',
-      icon: '?',
-      color: 'text-gray-400'
-    }
-  }
-
-  // 切换网络
-  const handleSwitchNetwork = async (targetChainId: number) => {
-    try {
-      await switchChain({ chainId: targetChainId })
-      setShowNetworkMenu(false)
-    } catch (error) {
-      console.error('Failed to switch network:', error)
-    }
-  }
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
 
   // 从 URL 参数获取合约地址
   useEffect(() => {
@@ -102,6 +45,13 @@ export default function Home() {
         }
       }
       
+      // 如果有 tab 参数，切换到对应标签页
+      if (router.query.tab === 'transactions') {
+        setActiveTab('transactions')
+      } else if (router.query.tab === 'deploy') {
+        setActiveTab('deploy')
+      }
+      
       // 自动切换到查看或交易管理页面
       if (router.query.tab === 'transactions') {
         setActiveTab('transactions')
@@ -111,21 +61,13 @@ export default function Home() {
     }
   }, [router.isReady, router.query])
 
-  // 点击外部关闭网络菜单
-  useEffect(() => {
-    const handleClickOutside = () => setShowNetworkMenu(false)
-    if (showNetworkMenu) {
-      document.addEventListener('click', handleClickOutside)
-      return () => document.removeEventListener('click', handleClickOutside)
-    }
-  }, [showNetworkMenu])
 
   if (!mounted) {
     return (
       <>
         <Head>
-          <title>MultiSig Deployer</title>
-          <meta name='description' content='企业多签钱包合约部署工具' />
+          <title>{t('title')}</title>
+          <meta name='description' content={t('subtitle')} />
         </Head>
         <div className="min-h-screen bg-primary-black flex items-center justify-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-light"></div>
@@ -136,246 +78,219 @@ export default function Home() {
 
   return (
     <>
-      <Head>
-        <title>MultiSig Deployer - 多签钱包管理工具</title>
-        <meta name='description' content='企业多签钱包合约部署工具' />
-      </Head>
+        <Head>
+          <title>{t('title')} - {t('index.managementTool')}</title>
+          <meta name='description' content={t('subtitle')} />
+        </Head>
       
       <div className="min-h-screen bg-primary-black relative overflow-hidden">
         {/* Background decorative elements */}
         <div className="absolute top-0 left-0 w-96 h-96 bg-primary-light/5 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-primary-gray/10 rounded-full blur-3xl"></div>
         
+        {/* Top Right Buttons - Language Switcher and Connect Wallet */}
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-3">
+          <LanguageSwitcher />
+          <ConnectButton />
+        </div>
+        
         <div className="container mx-auto px-4 py-8 relative z-10">
           {/* Header */}
           <div className="text-center mb-12">
             <div className="inline-block mb-6">
               <div className="text-6xl font-bold bg-gradient-to-r from-primary-light via-white to-primary-gray bg-clip-text text-transparent">
-                MultiSig Wallet
+                {t('index.multiSigWallet')}
               </div>
             </div>
             <h1 className="text-3xl font-semibold text-white mb-3">
-              多签钱包管理工具
+              {t('index.managementTool')}
             </h1>
             <p className="text-lg text-primary-gray max-w-2xl mx-auto">
-              安全、可靠的企业级多签名钱包解决方案
+              {t('index.enterpriseSolution')}
             </p>
           </div>
 
-          {/* Wallet Connection Bar */}
-          <div className="max-w-6xl mx-auto mb-8 relative z-50">
-            <div className="glass-card rounded-2xl shadow-2xl p-5 transition-all hover:shadow-primary-light/10">
-              <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-light/20 to-primary-gray/20 flex items-center justify-center">
-                    <Wallet className="w-6 h-6 text-primary-light" />
+          {/* 未连接钱包时显示产品介绍和营销内容 */}
+          {!isConnected ? (
+            <div className="max-w-6xl mx-auto space-y-12 pb-8">
+              {/* 产品优势 */}
+              <div className="glass-card rounded-3xl shadow-2xl p-8 md:p-10">
+                <h2 className="text-3xl font-bold text-white mb-8 text-center">{t('index.whyChooseTitle')}</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="flex flex-col items-center text-center p-6 rounded-xl bg-primary-dark/50 border border-primary-light/10 hover:border-primary-light/30 transition-all">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary-light/20 to-primary-gray/20 flex items-center justify-center mb-4">
+                      <Shield className="w-8 h-8 text-primary-light" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-white mb-2">{t('index.whyChooseSecurityTitle')}</h3>
+                    <p className="text-primary-gray text-sm">
+                      {t('index.whyChooseSecurityDesc')}
+                    </p>
                   </div>
-                  <div>
-                    <span className="text-white font-semibold block">钱包连接</span>
-                    <span className="text-primary-gray text-sm">Wallet Connection</span>
+                  <div className="flex flex-col items-center text-center p-6 rounded-xl bg-primary-dark/50 border border-primary-light/10 hover:border-primary-light/30 transition-all">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary-light/20 to-primary-gray/20 flex items-center justify-center mb-4">
+                      <Users className="w-8 h-8 text-primary-light" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-white mb-2">{t('index.whyChooseManagementTitle')}</h3>
+                    <p className="text-primary-gray text-sm">
+                      {t('index.whyChooseManagementDesc')}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-center text-center p-6 rounded-xl bg-primary-dark/50 border border-primary-light/10 hover:border-primary-light/30 transition-all">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary-light/20 to-primary-gray/20 flex items-center justify-center mb-4">
+                      <Lock className="w-8 h-8 text-primary-light" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-white mb-2">{t('index.whyChooseTransparentTitle')}</h3>
+                    <p className="text-primary-gray text-sm">
+                      {t('index.whyChooseTransparentDesc')}
+                    </p>
                   </div>
                 </div>
-                {isConnected ? (
-                  <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
-                    {/* Network Selector */}
-                    <div className="relative z-50">
+              </div>
+
+              {/* How It Works */}
+              <MultisigWorkflow />
+
+              {/* 使用场景 */}
+              <div className="glass-card rounded-3xl shadow-2xl p-8 md:p-10">
+                <h2 className="text-3xl font-bold text-white mb-8 text-center">{t('index.scenariosTitle')}</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="p-6 rounded-xl bg-primary-dark/50 border border-primary-light/10">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Zap className="w-6 h-6 text-primary-light" />
+                      <h3 className="text-lg font-semibold text-white">{t('index.scenarioCompanyTitle')}</h3>
+                    </div>
+                    <p className="text-primary-gray text-sm">
+                      {t('index.scenarioCompanyDesc')}
+                    </p>
+                  </div>
+                  <div className="p-6 rounded-xl bg-primary-dark/50 border border-primary-light/10">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Users className="w-6 h-6 text-primary-light" />
+                      <h3 className="text-lg font-semibold text-white">{t('index.scenarioDAOTitle')}</h3>
+                    </div>
+                    <p className="text-primary-gray text-sm">
+                      {t('index.scenarioDAODesc')}
+                    </p>
+                  </div>
+                  <div className="p-6 rounded-xl bg-primary-dark/50 border border-primary-light/10">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Shield className="w-6 h-6 text-primary-light" />
+                      <h3 className="text-lg font-semibold text-white">{t('index.scenarioProjectTitle')}</h3>
+                    </div>
+                    <p className="text-primary-gray text-sm">
+                      {t('index.scenarioProjectDesc')}
+                    </p>
+                  </div>
+                  <div className="p-6 rounded-xl bg-primary-dark/50 border border-primary-light/10">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Lock className="w-6 h-6 text-primary-light" />
+                      <h3 className="text-lg font-semibold text-white">{t('index.scenarioFamilyTitle')}</h3>
+                    </div>
+                    <p className="text-primary-gray text-sm">
+                      {t('index.scenarioFamilyDesc')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* CTA */}
+              <div className="glass-card rounded-3xl shadow-2xl p-8 md:p-10 text-center">
+                <h2 className="text-3xl font-bold text-white mb-4">{t('index.ctaTitle')}</h2>
+                <p className="text-primary-gray mb-6 max-w-2xl mx-auto">
+                  {t('index.ctaDesc')}
+                </p>
+                <div className="flex items-center justify-center gap-4">
+                  <ConnectButton />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* 已连接钱包时显示功能标签页 */}
+              <div className="flex flex-col md:flex-row gap-6">
+                {/* 左侧导航栏 */}
+                <div className="flex-shrink-0 w-full md:w-64">
+                  <div className="glass-effect rounded-2xl p-2 md:sticky md:top-24">
+                    <div className="flex flex-col gap-2 min-w-[240px]">
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setShowNetworkMenu(!showNetworkMenu)
-                        }}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary-gray/20 border border-primary-gray/30 hover:border-primary-light/50 transition-all group"
+                        onClick={() => setActiveTab('view')}
+                        className={`flex items-center gap-3 py-4 px-6 rounded-xl font-semibold transition-all w-full ${
+                          activeTab === 'view'
+                            ? 'bg-gradient-to-r from-primary-light to-primary-gray text-primary-black shadow-lg'
+                            : 'text-primary-gray hover:text-white hover:bg-white/5'
+                        }`}
                       >
-                        <span className={`text-xl ${getCurrentNetwork().color}`}>
-                          {getCurrentNetwork().icon}
-                        </span>
-                        <span className="text-white font-medium text-sm">
-                          {getCurrentNetwork().name}
-                        </span>
-                        <ChevronDown className="w-4 h-4 text-primary-gray group-hover:text-primary-light transition-colors" />
+                        <Eye className="w-5 h-5 flex-shrink-0" />
+                        <span className="whitespace-nowrap">{t('tabs.view')}</span>
                       </button>
-                      
-                      {/* Network Dropdown */}
-                      {showNetworkMenu && (
-                        <div className="absolute top-full mt-2 right-0 w-56 glass-card rounded-xl p-2 shadow-2xl border border-primary-light/20 max-h-96 overflow-y-auto z-[9999]">
-                          {/* Layer 1 Mainnets */}
-                          <div className="px-2 py-1.5 text-xs text-primary-gray font-semibold">Layer 1 主网</div>
-                          {SUPPORTED_NETWORKS.filter(n => n.type === 'mainnet').map((network) => (
-                            <button
-                              key={network.id}
-                              onClick={() => handleSwitchNetwork(network.id)}
-                              className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-all ${
-                                chainId === network.id
-                                  ? 'bg-primary-light/20 border border-primary-light/30'
-                                  : 'hover:bg-primary-gray/20'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className={`text-lg ${network.color}`}>{network.icon}</span>
-                                <span className="text-white text-sm font-medium">{network.name}</span>
-                              </div>
-                              {chainId === network.id && (
-                                <Check className="w-4 h-4 text-primary-light" />
-                              )}
-                            </button>
-                          ))}
-                          
-                          {/* Layer 2 */}
-                          <div className="px-2 py-1.5 text-xs text-primary-gray font-semibold mt-2">Layer 2</div>
-                          {SUPPORTED_NETWORKS.filter(n => n.type === 'layer2').map((network) => (
-                            <button
-                              key={network.id}
-                              onClick={() => handleSwitchNetwork(network.id)}
-                              className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-all ${
-                                chainId === network.id
-                                  ? 'bg-primary-light/20 border border-primary-light/30'
-                                  : 'hover:bg-primary-gray/20'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className={`text-lg ${network.color}`}>{network.icon}</span>
-                                <span className="text-white text-sm font-medium">{network.name}</span>
-                              </div>
-                              {chainId === network.id && (
-                                <Check className="w-4 h-4 text-primary-light" />
-                              )}
-                            </button>
-                          ))}
-                          
-                          {/* zkEVM */}
-                          <div className="px-2 py-1.5 text-xs text-primary-gray font-semibold mt-2">zkEVM</div>
-                          {SUPPORTED_NETWORKS.filter(n => n.type === 'zk').map((network) => (
-                            <button
-                              key={network.id}
-                              onClick={() => handleSwitchNetwork(network.id)}
-                              className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-all ${
-                                chainId === network.id
-                                  ? 'bg-primary-light/20 border border-primary-light/30'
-                                  : 'hover:bg-primary-gray/20'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className={`text-lg ${network.color}`}>{network.icon}</span>
-                                <span className="text-white text-sm font-medium">{network.name}</span>
-                              </div>
-                              {chainId === network.id && (
-                                <Check className="w-4 h-4 text-primary-light" />
-                              )}
-                            </button>
-                          ))}
-                          
-                          {/* Testnets */}
-                          <div className="px-2 py-1.5 text-xs text-primary-gray font-semibold mt-2 border-t border-primary-gray/20 pt-2">测试网</div>
-                          {SUPPORTED_NETWORKS.filter(n => n.type === 'testnet').map((network) => (
-                            <button
-                              key={network.id}
-                              onClick={() => handleSwitchNetwork(network.id)}
-                              className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-all ${
-                                chainId === network.id
-                                  ? 'bg-primary-light/20 border border-primary-light/30'
-                                  : 'hover:bg-primary-gray/20'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className={`text-lg ${network.color}`}>{network.icon}</span>
-                                <span className="text-white text-sm font-medium">{network.name}</span>
-                              </div>
-                              {chainId === network.id && (
-                                <Check className="w-4 h-4 text-primary-light" />
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                      <button
+                        onClick={() => setActiveTab('transactions')}
+                        className={`flex items-center gap-3 py-4 px-6 rounded-xl font-semibold transition-all w-full ${
+                          activeTab === 'transactions'
+                            ? 'bg-gradient-to-r from-primary-light to-primary-gray text-primary-black shadow-lg'
+                            : 'text-primary-gray hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        <Send className="w-5 h-5 flex-shrink-0" />
+                        <span className="whitespace-nowrap">{t('tabs.transactions')}</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('deploy')}
+                        className={`flex items-center gap-3 py-4 px-6 rounded-xl font-semibold transition-all w-full ${
+                          activeTab === 'deploy'
+                            ? 'bg-gradient-to-r from-primary-light to-primary-gray text-primary-black shadow-lg'
+                            : 'text-primary-gray hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        <Plus className="w-5 h-5 flex-shrink-0" />
+                        <span className="whitespace-nowrap">{t('tabs.deploy')}</span>
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('settings')}
+                        className={`flex items-center gap-3 py-4 px-6 rounded-xl font-semibold transition-all w-full ${
+                          activeTab === 'settings'
+                            ? 'bg-gradient-to-r from-primary-light to-primary-gray text-primary-black shadow-lg'
+                            : 'text-primary-gray hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        <Settings className="w-5 h-5 flex-shrink-0" />
+                        <span className="whitespace-nowrap">{t('tabs.settings')}</span>
+                      </button>
                     </div>
-
-                    {/* Wallet Address */}
-                    <div className="px-4 py-2.5 rounded-lg bg-primary-light/10 border border-primary-light/30">
-                      <span className="text-primary-light font-mono text-sm">
-                        {address?.slice(0, 6)}...{address?.slice(-4)}
-                      </span>
-                    </div>
-
-                    {/* Disconnect Button */}
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault()
-                        disconnect()
-                      }}
-                      className="px-5 py-2.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-all font-medium border border-red-500/30 hover:border-red-500/50"
-                    >
-                      断开
-                    </button>
                   </div>
-                ) : (
-                  <button
-                    onClick={() => connect({ connector: connectors[0] })}
-                    className="px-8 py-3 bg-gradient-to-r from-primary-light to-primary-gray text-primary-black rounded-xl hover:shadow-lg hover:shadow-primary-light/20 transition-all font-semibold"
-                  >
-                    连接钱包
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="max-w-6xl mx-auto mb-8">
-            <div className="glass-effect rounded-2xl p-2">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                <button
-                  onClick={() => setActiveTab('view')}
-                  className={`flex items-center justify-center gap-3 py-4 px-6 rounded-xl font-semibold transition-all ${
-                    activeTab === 'view'
-                      ? 'bg-gradient-to-r from-primary-light to-primary-gray text-primary-black shadow-lg'
-                      : 'text-primary-gray hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <Eye className="w-5 h-5" />
-                  <span>查看合约</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('transactions')}
-                  className={`flex items-center justify-center gap-3 py-4 px-6 rounded-xl font-semibold transition-all ${
-                    activeTab === 'transactions'
-                      ? 'bg-gradient-to-r from-primary-light to-primary-gray text-primary-black shadow-lg'
-                      : 'text-primary-gray hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <Send className="w-5 h-5" />
-                  <span>交易管理</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('deploy')}
-                  className={`flex items-center justify-center gap-3 py-4 px-6 rounded-xl font-semibold transition-all ${
-                    activeTab === 'deploy'
-                      ? 'bg-gradient-to-r from-primary-light to-primary-gray text-primary-black shadow-lg'
-                      : 'text-primary-gray hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <Plus className="w-5 h-5" />
-                  <span>部署新合约</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Content */}
-          <div className="max-w-6xl mx-auto glass-card rounded-3xl shadow-2xl p-8 md:p-10">
-            {activeTab === 'view' ? (
-              <MultiSigWalletViewer initialContract={urlContract} />
-            ) : activeTab === 'transactions' ? (
-              <TransactionManager initialContract={urlContract} />
-            ) : (
-              <div className="space-y-6">
-                <div className="border-b border-primary-light/20 pb-6 mb-8">
-                  <h2 className="text-3xl font-bold text-white mb-3">部署新的多签钱包</h2>
-                  <p className="text-primary-gray text-lg">配置并部署一个新的多签名钱包合约</p>
                 </div>
-                <MultiSigDeployer />
+
+                {/* 右侧内容区域 */}
+                <div className="flex-1 min-w-0">
+                  <div className="glass-card rounded-3xl shadow-2xl p-8 md:p-10">
+                {activeTab === 'view' ? (
+                  <DeployedContractsList 
+                    onInitiateTransfer={(contractAddress, chainId) => {
+                      setSelectedContract({ address: contractAddress, chainId })
+                      setActiveTab('transactions')
+                    }}
+                  />
+                ) : activeTab === 'transactions' ? (
+                  <TransactionManager 
+                    initialContract={selectedContract?.address || urlContract}
+                    initialChainId={selectedContract?.chainId}
+                  />
+                ) : activeTab === 'settings' ? (
+                  <UserSettings />
+                ) : (
+                  <div className="space-y-6">
+                    <div className="border-b border-primary-light/20 pb-6 mb-8">
+                      <h2 className="text-3xl font-bold text-white mb-3">{t('deploy.title')}</h2>
+                      <p className="text-primary-gray text-lg">{t('deploy.subtitle')}</p>
+                    </div>
+                    <MultiSigDeployer />
+                  </div>
+                )}
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
+            </>
+          )}
 
         </div>
       </div>
@@ -383,10 +298,11 @@ export default function Home() {
   )
 }
 
-export async function getStaticProps({ locale }: { locale: string }) {
+export async function getServerSideProps(context: any) {
+  const { locale } = context
   return {
     props: {
-      ...(await serverSideTranslations(locale, ['common'])),
+      ...(await serverSideTranslations(locale || 'zh-CN', ['common'])),
     },
   }
 }

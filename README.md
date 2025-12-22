@@ -36,13 +36,16 @@
 
 - ✅ **安全的多签机制**: 支持 M-of-N 多签方案（如 2/3, 3/5 等）
 - ✅ **完整的交易管理**: 提交、确认、撤销、执行交易的完整流程
-- ✅ **合约地址管理**: 输入和保存已部署的合约地址
-- ✅ **分享链接功能**: 生成可分享链接，方便多方协作
-- ✅ **实时状态追踪**: 可视化显示交易确认进度
-- ✅ **现代化 UI**: 基于最新设计趋势的美观界面
+- ✅ **交易过期机制**: 类似 Gnosis Safe，支持设置交易过期时间（7/14/21/28天或永不过期），过期后自动失效
+- ✅ **合约地址管理**: 输入和保存已部署的合约地址，支持自定义标签
+- ✅ **实时状态追踪**: 可视化显示交易确认进度和状态
+- ✅ **现代化 UI**: 基于最新设计趋势的美观界面，支持中英文切换
 - ✅ **Web3 集成**: 支持 MetaMask、WalletConnect 等主流钱包
 - ✅ **多链支持**: 支持 14+ 个 EVM 兼容网络
-- ✅ **完善的测试**: 14 个单元测试全部通过
+- ✅ **邮件通知系统**: 自动发送交易审批通知邮件
+- ✅ **白名单管理**: 支持收款地址白名单，提高安全性
+- ✅ **用户设置**: 邮箱绑定、白名单管理等个人设置功能
+- ✅ **交易记录**: 完整的链上和数据库交易记录追踪
 
 ---
 
@@ -95,10 +98,25 @@
 #### 2. 管理交易
 
 ```
-1. 在"交易管理"标签输入合约地址
-2. 提交新交易：输入接收地址和金额
-3. 确认交易：其他所有者查看并确认
-4. 执行交易：达到所需确认数后执行
+1. 在"交易管理"页面查看所有交易
+2. 点击"发起交易"按钮
+3. 选择或输入多签钱包地址
+4. 填写收款地址、资产类型和金额
+5. 选择过期时间（可选：7/14/21/28天或永不过期）
+6. 选择需要确认的所有者
+7. 提交交易后，系统自动发送邮件通知审批者
+8. 审批者收到邮件后，在"等待我审批的交易"中确认
+9. 达到所需确认数后，可执行交易
+10. 如果交易在过期时间内未获得足够确认，将自动失效
+```
+
+#### 3. 个人设置
+
+```
+1. 点击左侧导航栏的"设置"按钮
+2. 绑定邮箱：输入邮箱地址，接收验证码并验证
+3. 管理白名单：添加、删除、编辑收款地址白名单
+4. 白名单地址可在发起交易时快速选择
 ```
 
 ---
@@ -149,9 +167,11 @@ cd multisig-deployer
 npm install
 
 # 3. 配置环境变量
-cp .env.example .env.local
-
-# 编辑 .env.local 填入以下配置：
+# 创建 .env.local 文件，添加以下配置：
+# NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+# NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+# SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+# RESEND_API_KEY=your_resend_api_key
 # NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id
 # NEXT_PUBLIC_ETHEREUM_RPC_URL=your_rpc_url
 # NEXT_PUBLIC_POLYGON_RPC_URL=your_rpc_url
@@ -191,15 +211,25 @@ multisig-deployer/
 │   └── MultiSigWallet.sol # 多签钱包合约
 ├── components/            # React 组件
 │   ├── MultiSigDeployer.tsx        # 部署界面
-│   ├── MultiSigWalletViewer.tsx    # 查看界面
-│   └── TransactionManager.tsx      # 交易管理
+│   ├── DeployedContractsList.tsx   # 合约列表
+│   ├── TransactionManager.tsx      # 交易管理
+│   ├── TransferModal.tsx           # 转账弹窗
+│   ├── UserSettings.tsx            # 用户设置
+│   └── MultisigWorkflow.tsx        # 工作流程展示
 ├── pages/                 # Next.js 页面
 │   ├── _app.tsx          # 应用入口
-│   └── index.tsx         # 主页面
+│   ├── index.tsx         # 主页面
+│   └── api/              # API 路由
+│       ├── users/        # 用户相关 API
+│       ├── deployments/  # 部署相关 API
+│       ├── transactions/ # 交易相关 API
+│       ├── whitelist/    # 白名单相关 API
+│       └── analytics/    # 统计相关 API
 ├── lib/                   # 工具库
-│   ├── contracts.ts      # 合约配置
-│   ├── networks.ts       # 网络配置
-│   └── web3Config.ts     # Web3 配置
+│   ├── supabase.ts       # Supabase 客户端
+│   └── email.ts          # 邮件发送工具
+├── public/                # 静态资源
+│   └── locales/          # 国际化文件
 ├── test/                  # 测试文件
 │   └── MultiSigWallet.test.js
 ├── hardhat.config.js      # Hardhat 配置
@@ -237,6 +267,14 @@ npm run test
 - ✅ 权限控制和参数验证
 - ✅ 防重入攻击保护
 
+### 应用安全
+
+- ✅ 环境变量安全存储（`.env.local` 已加入 `.gitignore`）
+- ✅ API 密钥仅在服务端使用
+- ✅ 邮箱验证码防暴力破解保护
+- ✅ 交易审批二次确认机制
+- ✅ 白名单地址管理
+
 ### 最佳实践
 
 1. **在主网部署前务必在测试网测试**
@@ -244,6 +282,7 @@ npm run test
 3. **合理设置确认比例**
 4. **定期备份合约地址**
 5. **保管好私钥和助记词**
+6. **使用白名单功能提高安全性**
 
 ---
 
@@ -256,17 +295,28 @@ npm run test
 - **Wagmi v2** - Web3 React Hooks
 - **Viem** - 以太坊交互库
 - **React Hot Toast** - 通知组件
+- **next-i18next** - 国际化支持
+
+### 后端
+- **Next.js API Routes** - 服务端 API
+- **Supabase** - 数据库和用户管理
+- **Resend** - 邮件发送服务
 
 ### 智能合约
 - **Solidity 0.8.19** - 合约语言
 - **Hardhat** - 开发环境
 - **OpenZeppelin** - 安全库
-- **Ethers.js** - 以太坊库
 
 ### 测试
 - **Mocha** - 测试框架
 - **Chai** - 断言库
 - **Hardhat Network** - 本地测试网络
+
+---
+
+## 📖 API 文档
+
+详细的 API 文档请参考 [API_DOCUMENTATION.md](./API_DOCUMENTATION.md)
 
 ---
 
@@ -288,6 +338,7 @@ npm run test
 - Public Wallets:
   - **0xfannie.eth**: `0x36C1ad1E9eB589E20fF739FAD024a7ff3113Ba27`
   - **Catalizer.eth**: `0xF9147fb1c9799fA61bC9a41B28FFf2EE80654fd5`
+  - **fannie.sol**: `4SUKuF4jt2ya6No5okHGvk5tsezAZaf3bVHvCf1pNqrC`
 
 ---
 
@@ -344,13 +395,16 @@ This is a **complete on-chain multi-signature wallet management system** that al
 
 - ✅ **Secure Multi-Sig Mechanism**: Support M-of-N multi-sig schemes (e.g., 2/3, 3/5, etc.)
 - ✅ **Complete Transaction Management**: Full workflow of submit, confirm, revoke, and execute transactions
-- ✅ **Contract Address Management**: Input and save deployed contract addresses
-- ✅ **Shareable Links**: Generate shareable links for easy multi-party collaboration
-- ✅ **Real-time Status Tracking**: Visual display of transaction confirmation progress
-- ✅ **Modern UI**: Beautiful interface based on latest design trends
+- ✅ **Transaction Expiration**: Similar to Gnosis Safe, support setting transaction expiration time (7/14/21/28 days or never), transactions automatically expire if not confirmed in time
+- ✅ **Contract Address Management**: Input and save deployed contract addresses with custom labels
+- ✅ **Real-time Status Tracking**: Visual display of transaction confirmation progress and status
+- ✅ **Modern UI**: Beautiful interface based on latest design trends with English/Chinese support
 - ✅ **Web3 Integration**: Support mainstream wallets like MetaMask, WalletConnect
 - ✅ **Multi-Chain Support**: Support 14+ EVM-compatible networks
-- ✅ **Comprehensive Testing**: All 14 unit tests passed
+- ✅ **Email Notification System**: Automatically send transaction approval notification emails
+- ✅ **Whitelist Management**: Support recipient address whitelist for enhanced security
+- ✅ **User Settings**: Email binding, whitelist management and other personal settings
+- ✅ **Transaction Records**: Complete on-chain and database transaction tracking
 
 ---
 
@@ -403,10 +457,25 @@ Visit **https://multisig.chain-tools.com** to use directly.
 #### 2. Manage Transactions
 
 ```
-1. Enter contract address in "Transaction Management" tab
-2. Submit new transaction: Enter recipient address and amount
-3. Confirm transaction: Other owners review and confirm
-4. Execute transaction: Execute after required confirmations reached
+1. View all transactions in "Transaction Management" page
+2. Click "Initiate Transaction" button
+3. Select or input MultiSig wallet address
+4. Fill in recipient address, asset type and amount
+5. Select expiration time (optional: 7/14/21/28 days or never)
+6. Select owners for approval
+7. After submission, system automatically sends email notifications to approvers
+8. Approvers receive emails and confirm in "Pending Approvals" section
+9. Execute transaction after required confirmations reached
+10. If transaction doesn't receive enough confirmations before expiration, it will automatically expire
+```
+
+#### 3. Personal Settings
+
+```
+1. Click "Settings" button in left sidebar
+2. Bind Email: Enter email address, receive and verify code
+3. Manage Whitelist: Add, delete, edit recipient address whitelist
+4. Whitelist addresses can be quickly selected when initiating transactions
 ```
 
 ---
@@ -457,9 +526,11 @@ cd multisig-deployer
 npm install
 
 # 3. Configure environment variables
-cp .env.example .env.local
-
-# Edit .env.local with following configuration:
+# Create .env.local file with following configuration:
+# NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+# NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+# SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+# RESEND_API_KEY=your_resend_api_key
 # NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id
 # NEXT_PUBLIC_ETHEREUM_RPC_URL=your_rpc_url
 # NEXT_PUBLIC_POLYGON_RPC_URL=your_rpc_url
@@ -499,15 +570,25 @@ multisig-deployer/
 │   └── MultiSigWallet.sol # MultiSig wallet contract
 ├── components/            # React components
 │   ├── MultiSigDeployer.tsx        # Deploy interface
-│   ├── MultiSigWalletViewer.tsx    # View interface
-│   └── TransactionManager.tsx      # Transaction management
+│   ├── DeployedContractsList.tsx   # Contract list
+│   ├── TransactionManager.tsx      # Transaction management
+│   ├── TransferModal.tsx           # Transfer modal
+│   ├── UserSettings.tsx            # User settings
+│   └── MultisigWorkflow.tsx        # Workflow display
 ├── pages/                 # Next.js pages
 │   ├── _app.tsx          # App entry
-│   └── index.tsx         # Main page
+│   ├── index.tsx         # Main page
+│   └── api/              # API routes
+│       ├── users/        # User related APIs
+│       ├── deployments/  # Deployment related APIs
+│       ├── transactions/ # Transaction related APIs
+│       ├── whitelist/    # Whitelist related APIs
+│       └── analytics/    # Analytics related APIs
 ├── lib/                   # Utility libraries
-│   ├── contracts.ts      # Contract configuration
-│   ├── networks.ts       # Network configuration
-│   └── web3Config.ts     # Web3 configuration
+│   ├── supabase.ts       # Supabase client
+│   └── email.ts          # Email sending utility
+├── public/                # Static assets
+│   └── locales/          # i18n files
 ├── test/                  # Test files
 │   └── MultiSigWallet.test.js
 ├── hardhat.config.js      # Hardhat configuration
@@ -545,6 +626,16 @@ npm run test
 - ✅ Permission control and parameter validation
 - ✅ Reentrancy attack protection
 
+### Application Security
+
+- ✅ Secure environment variable storage (`.env.local` added to `.gitignore`)
+- ✅ API keys only used on server-side, never exposed to client
+- ✅ Service Role Key only used on server-side, never exposed to frontend
+- ✅ Email verification code brute-force protection
+- ✅ Transaction approval double confirmation
+- ✅ Whitelist address management
+- ✅ Transaction expiration mechanism prevents long-pending transactions
+
 ### Best Practices
 
 1. **Always test on testnet before mainnet deployment**
@@ -552,6 +643,7 @@ npm run test
 3. **Set reasonable confirmation ratios**
 4. **Regularly backup contract addresses**
 5. **Keep private keys and mnemonics secure**
+6. **Use whitelist feature for enhanced security**
 
 ---
 
@@ -564,17 +656,28 @@ npm run test
 - **Wagmi v2** - Web3 React Hooks
 - **Viem** - Ethereum Interaction Library
 - **React Hot Toast** - Notification Component
+- **next-i18next** - Internationalization Support
+
+### Backend
+- **Next.js API Routes** - Server-side APIs
+- **Supabase** - Database and User Management
+- **Resend** - Email Sending Service
 
 ### Smart Contracts
 - **Solidity 0.8.19** - Contract Language
 - **Hardhat** - Development Environment
 - **OpenZeppelin** - Security Libraries
-- **Ethers.js** - Ethereum Library
 
 ### Testing
 - **Mocha** - Testing Framework
 - **Chai** - Assertion Library
 - **Hardhat Network** - Local Test Network
+
+---
+
+## 📖 API Documentation
+
+Detailed API documentation can be found in [API_DOCUMENTATION.md](./API_DOCUMENTATION.md)
 
 ---
 
@@ -596,6 +699,7 @@ npm run test
 - Public Wallets:
   - **0xfannie.eth**: `0x36C1ad1E9eB589E20fF739FAD024a7ff3113Ba27`
   - **Catalizer.eth**: `0xF9147fb1c9799fA61bC9a41B28FFf2EE80654fd5`
+  - **fannie.sol**: `4SUKuF4jt2ya6No5okHGvk5tsezAZaf3bVHvCf1pNqrC`
 
 ---
 
