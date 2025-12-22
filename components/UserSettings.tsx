@@ -38,6 +38,7 @@ export function UserSettings() {
     if (!isConnected || !address) return
 
     const loadUser = async () => {
+      setLoading(true)
       // 先尝试从 localStorage 获取
       let savedUserId = localStorage.getItem('multisig_user_id')
       
@@ -45,6 +46,7 @@ export function UserSettings() {
       if (!savedUserId) {
         // 使用专门的 API 端点，根据钱包地址查找用户，不需要签名验证
         try {
+          console.log('Fetching user by wallet address:', address)
           const response = await fetch('/api/users/get-by-wallet', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -52,65 +54,120 @@ export function UserSettings() {
               walletAddress: address
             })
           })
+          
+          if (!response.ok) {
+            console.error('API response not OK:', response.status, response.statusText)
+            const errorData = await response.json().catch(() => ({}))
+            console.error('Error data:', errorData)
+            throw new Error(errorData.error || `API error: ${response.status}`)
+          }
+          
           const data = await response.json()
+          console.log('API response:', data)
+          
           if (data.success && data.user?.id) {
             savedUserId = data.user.id
             if (savedUserId) {
               localStorage.setItem('multisig_user_id', savedUserId)
+              console.log('User ID saved to localStorage:', savedUserId)
             }
           } else {
             console.warn('User not found by wallet address:', data.error || data.message)
             // 如果用户不存在，显示错误信息
             if (data.error === 'User not found') {
               console.warn('User needs to interact with the app first to create account')
+              toast.error(ready ? t('settings.userNotFound') || 'User not found. Please interact with the app first.' : '用户未找到，请先与应用交互')
+            } else if (data.error === 'Database connection not available') {
+              console.error('Database connection not available')
+              toast.error(ready ? t('settings.databaseError') || 'Database connection error' : '数据库连接错误')
             }
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('Failed to get user ID:', error)
+          toast.error(ready ? t('settings.loadUserFailed') || 'Failed to load user information' : '加载用户信息失败')
         }
       }
       
       if (savedUserId) {
         setUserId(savedUserId)
-        loadUserInfo(savedUserId)
-        loadWhitelist(savedUserId)
+        await loadUserInfo(savedUserId)
+        await loadWhitelist(savedUserId)
       } else {
         console.warn('User ID not found. User may need to interact with the app first.')
       }
+      setLoading(false)
     }
     
     loadUser()
   }, [isConnected, address])
 
   const loadUserInfo = async (uid: string | null) => {
-    if (!uid) return
+    if (!uid) {
+      console.warn('loadUserInfo called with null userId')
+      return
+    }
     try {
+      console.log('Loading user info for userId:', uid)
       const response = await fetch('/api/users/get-info', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: uid }),
       })
+      
+      if (!response.ok) {
+        console.error('get-info API response not OK:', response.status, response.statusText)
+        const errorData = await response.json().catch(() => ({}))
+        console.error('Error data:', errorData)
+        throw new Error(errorData.error || `API error: ${response.status}`)
+      }
+      
       const data = await response.json()
+      console.log('User info loaded:', data)
+      
       if (data.success) {
         setUserEmail(data.user.email)
         setEmailVerified(!!data.user.email_verified_at)
         setEmailInput(data.user.email || '')
+        console.log('User info set:', { email: data.user.email, verified: !!data.user.email_verified_at })
+      } else {
+        console.error('Failed to load user info:', data.error)
+        toast.error(data.error || (ready ? t('settings.loadUserInfoFailed') || 'Failed to load user information' : '加载用户信息失败'))
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load user info:', error)
+      toast.error(error.message || (ready ? t('settings.loadUserInfoFailed') || 'Failed to load user information' : '加载用户信息失败'))
     }
   }
 
   const loadWhitelist = async (uid: string | null) => {
-    if (!uid) return
+    if (!uid) {
+      console.warn('loadWhitelist called with null userId')
+      return
+    }
     try {
+      console.log('Loading whitelist for userId:', uid)
       const response = await fetch(`/api/whitelist/list?userId=${uid}`)
+      
+      if (!response.ok) {
+        console.error('whitelist/list API response not OK:', response.status, response.statusText)
+        const errorData = await response.json().catch(() => ({}))
+        console.error('Error data:', errorData)
+        throw new Error(errorData.error || `API error: ${response.status}`)
+      }
+      
       const data = await response.json()
+      console.log('Whitelist loaded:', data)
+      
       if (data.success) {
         setWhitelist(data.whitelist || [])
+        console.log(`Whitelist set with ${data.whitelist?.length || 0} entries`)
+      } else {
+        console.error('Failed to load whitelist:', data.error)
+        toast.error(data.error || (ready ? t('settings.loadWhitelistFailed') || 'Failed to load whitelist' : '加载白名单失败'))
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load whitelist:', error)
+      toast.error(error.message || (ready ? t('settings.loadWhitelistFailed') || 'Failed to load whitelist' : '加载白名单失败'))
     }
   }
 
