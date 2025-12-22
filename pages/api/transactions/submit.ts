@@ -359,7 +359,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         current_confirmations: 0,
         required_confirmations: deployment.threshold,
         is_whitelisted_recipient: isWhitelisted,
-        expiration_time: expirationTime || null
+        expiration_time: expirationTime ? new Date(Number(expirationTime) * 1000).toISOString() : null
       }])
       .select()
 
