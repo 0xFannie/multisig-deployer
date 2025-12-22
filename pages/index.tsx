@@ -1,12 +1,21 @@
 ﻿import Head from 'next/head'
 import { useState, useEffect } from 'react'
 import { useAccount, useChainId, useSwitchChain, useConnect, useConnectors } from 'wagmi'
-import { ConnectButton } from '@rainbow-me/rainbowkit'
+import dynamic from 'next/dynamic'
 import { Eye, Plus, Send, Shield, Users, Lock, Settings, Zap } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { useTranslation } from 'next-i18next'
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
+
+// 动态导入 ConnectButton，禁用 SSR 以避免服务器端模块兼容性问题
+const ConnectButton = dynamic(
+  async () => {
+    const { ConnectButton: Button } = await import('@rainbow-me/rainbowkit')
+    return { default: Button }
+  },
+  { ssr: false }
+)
 
 // Add LanguageSwitcher to the header
 import { MultiSigDeployer } from '../components/MultiSigDeployer'
