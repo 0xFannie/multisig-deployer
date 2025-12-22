@@ -215,7 +215,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       assetType, // 'native', 'usdt', 'usdc', etc.
       assetAddress, // token contract address if not native
       submittedBy,
-      transactionHash
+      transactionHash,
+      expirationTime // optional Unix timestamp in seconds
     } = req.body
 
     if (!userId || !contractAddress || !network || txIndex === undefined || !to || !value || !submittedBy || !transactionHash) {
