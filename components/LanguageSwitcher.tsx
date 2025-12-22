@@ -21,7 +21,7 @@ export function LanguageSwitcher() {
   }, [showMenu])
 
   const changeLanguage = (locale: string) => {
-    router.push(router.pathname, router.asPath, { locale })
+    router.push(router.pathname, router.asPath, { locale, shallow: false })
     setShowMenu(false)
   }
 

@@ -1,16 +1,19 @@
 import { Github } from 'lucide-react'
+import { useTranslation } from 'next-i18next'
 
 export function Footer() {
+  const { t } = useTranslation('common')
+  
   return (
     <footer className="w-full border-t border-primary-light/20 mt-auto py-6 px-4">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex flex-col items-center md:items-start gap-1">
           <p className="text-primary-gray text-sm">
-            Made with <span className="text-pink-500">❤️</span> by{' '}
+            {t('footer.madeWith')} <span className="text-pink-500">❤️</span> {t('footer.by')}{' '}
             <span className="text-white font-semibold">0xfannie.eth</span>
           </p>
           <p className="text-primary-gray text-xs">
-            开源项目 · 完全免费 · 持续更新
+            {t('footer.description')}
           </p>
         </div>
         <a

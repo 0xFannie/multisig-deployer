@@ -41,17 +41,15 @@ export function UserSettings() {
       // 先尝试从 localStorage 获取
       let savedUserId = localStorage.getItem('multisig_user_id')
       
-      // 如果没有 userId，通过 API 获取或创建用户
+      // 如果没有 userId，通过 API 获取用户（根据钱包地址）
       if (!savedUserId) {
-        // 使用 API 而不是直接使用 Supabase 客户端，避免在客户端创建多个实例
+        // 使用专门的 API 端点，根据钱包地址查找用户，不需要签名验证
         try {
-          const response = await fetch('/api/users/connect', {
+          const response = await fetch('/api/users/get-by-wallet', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              walletAddress: address,
-              signature: '', // 这里不需要签名，只是获取用户ID
-              message: ''
+              walletAddress: address
             })
           })
           const data = await response.json()
@@ -59,6 +57,12 @@ export function UserSettings() {
             savedUserId = data.user.id
             if (savedUserId) {
               localStorage.setItem('multisig_user_id', savedUserId)
+            }
+          } else {
+            console.warn('User not found by wallet address:', data.error || data.message)
+            // 如果用户不存在，显示错误信息
+            if (data.error === 'User not found') {
+              console.warn('User needs to interact with the app first to create account')
             }
           }
         } catch (error) {
