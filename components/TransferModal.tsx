@@ -637,8 +637,9 @@ export function TransferModal({
 
       // 调用合约的 submitTransaction
       // 使用 simulateContract 先模拟执行，获取更详细的错误信息
+      console.log('Starting transaction simulation...')
       try {
-        await publicClient!.simulateContract({
+        const simulationResult = await publicClient!.simulateContract({
           address: contractAddress as `0x${string}`,
           abi: MultiSigWalletABI.abi,
           functionName: 'submitTransaction',
@@ -650,17 +651,36 @@ export function TransferModal({
           ],
           account: address as `0x${string}`,
         })
-        console.log('Transaction simulation successful')
+        console.log('Transaction simulation successful:', simulationResult)
       } catch (simError: any) {
         console.error('Transaction simulation failed:', simError)
+        console.error('Simulation error details:', {
+          message: simError?.message,
+          shortMessage: simError?.shortMessage,
+          cause: simError?.cause,
+          data: simError?.data,
+          reason: simError?.cause?.reason,
+          dataArgs: simError?.cause?.data?.args,
+        })
+        
         // 提取 revert reason
-        const revertReason = simError?.cause?.data?.args?.[0] || 
-                            simError?.cause?.reason || 
-                            simError?.shortMessage ||
-                            'Unknown revert reason'
-        throw new Error(`Transaction would fail: ${revertReason}`)
+        let revertReason = 'Unknown revert reason'
+        if (simError?.cause?.data?.args?.[0]) {
+          revertReason = simError.cause.data.args[0]
+        } else if (simError?.cause?.reason) {
+          revertReason = simError.cause.reason
+        } else if (simError?.shortMessage) {
+          revertReason = simError.shortMessage
+        } else if (simError?.message) {
+          revertReason = simError.message
+        }
+        
+        const errorMessage = `Transaction would fail: ${revertReason}`
+        console.error('Throwing error:', errorMessage)
+        throw new Error(errorMessage)
       }
       
+      console.log('Simulation passed, submitting actual transaction...')
       const hash = await walletClient.writeContract({
         address: contractAddress as `0x${string}`,
         abi: MultiSigWalletABI.abi,
