@@ -641,13 +641,26 @@ export function TransferModal({
         throw new Error('Invalid transfer value: must be greater than 0')
       }
 
-      // 验证合约是否支持 submitTransaction 函数（检查合约代码）
+      // 验证合约是否支持 submitTransaction 函数（检查合约代码和函数签名）
       try {
         const contractCode = await publicClient!.getBytecode({ address: contractAddress as `0x${string}` })
         if (!contractCode || contractCode === '0x') {
           throw new Error('Contract address does not contain code. Please verify the contract address.')
         }
         console.log('Contract code verified, bytecode length:', contractCode.length)
+        
+        // 尝试读取合约的 getTransactionCount 来验证合约是否是多签钱包
+        try {
+          const txCount = await publicClient!.readContract({
+            address: contractAddress as `0x${string}`,
+            abi: MultiSigWalletABI.abi,
+            functionName: 'getTransactionCount',
+          })
+          console.log('Contract is a valid MultiSigWallet, transaction count:', Number(txCount))
+        } catch (readError: any) {
+          console.error('Failed to read from contract, may be wrong contract version:', readError)
+          throw new Error('Contract does not appear to be a valid MultiSigWallet. Please verify the contract address and ensure it was deployed with the latest version.')
+        }
       } catch (error: any) {
         console.error('Contract verification failed:', error)
         throw new Error(`Failed to verify contract: ${error.message}`)
