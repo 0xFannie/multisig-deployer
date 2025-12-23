@@ -77,6 +77,12 @@ export function TransactionManager({ initialContract, initialChainId }: Transact
   const [selectedTransaction, setSelectedTransaction] = useState<DatabaseTransaction | null>(null)
   const [transactionToRevoke, setTransactionToRevoke] = useState<DatabaseTransaction | null>(null)
 
+  // 合约 owner 验证
+  const [currentContractAddress, setCurrentContractAddress] = useState<string | null>(initialContract || null)
+  const [currentContractOwners, setCurrentContractOwners] = useState<string[]>([])
+  const [isCurrentWalletOwner, setIsCurrentWalletOwner] = useState<boolean | null>(null) // null 表示未检查
+  const [checkingOwner, setCheckingOwner] = useState(false)
+
   // 初始化
   useEffect(() => {
     setMounted(true)
@@ -304,10 +310,71 @@ export function TransactionManager({ initialContract, initialChainId }: Transact
     await Promise.all([loadMyTransactions(), loadPendingApprovals()])
   }
 
+  // 检查当前钱包是否是合约的 owner
+  const checkWalletIsOwner = async (contractAddress: string, contractChainId: number) => {
+    if (!address || !publicClient) {
+      setIsCurrentWalletOwner(null)
+      return
+    }
+
+    setCheckingOwner(true)
+    try {
+      // 检查网络是否匹配
+      if (chainId !== contractChainId) {
+        setIsCurrentWalletOwner(false)
+        setCheckingOwner(false)
+        return
+      }
+
+      // 获取合约的 owners
+      const owners = await publicClient.readContract({
+        address: contractAddress as `0x${string}`,
+        abi: MultiSigWalletABI.abi,
+        functionName: 'getOwners',
+      }) as string[]
+
+      setCurrentContractOwners(owners)
+      
+      // 检查当前钱包是否是 owner
+      const isOwner = owners.some(
+        owner => owner.toLowerCase() === address.toLowerCase()
+      )
+      
+      setIsCurrentWalletOwner(isOwner)
+      console.log('Owner check result:', {
+        contractAddress,
+        currentWallet: address,
+        owners,
+        isOwner
+      })
+    } catch (error) {
+      console.error('Failed to check wallet owner status:', error)
+      setIsCurrentWalletOwner(false)
+    } finally {
+      setCheckingOwner(false)
+    }
+  }
+
+  // 当 initialContract 变化时，检查 owner 状态
+  useEffect(() => {
+    if (initialContract && initialChainId && publicClient && address) {
+      setCurrentContractAddress(initialContract)
+      checkWalletIsOwner(initialContract, initialChainId)
+    } else {
+      setCurrentContractAddress(null)
+      setIsCurrentWalletOwner(null)
+      setCurrentContractOwners([])
+    }
+  }, [initialContract, initialChainId, address, publicClient])
+
   // 当用户连接或地址变化时加载数据
   useEffect(() => {
     if (mounted && isConnected && address) {
       loadAllData()
+      // 如果当前有合约地址，重新检查 owner 状态
+      if (currentContractAddress && initialChainId) {
+        checkWalletIsOwner(currentContractAddress, initialChainId)
+      }
     }
   }, [mounted, isConnected, address])
 
@@ -587,18 +654,31 @@ export function TransactionManager({ initialContract, initialChainId }: Transact
   return (
     <div className="space-y-6">
       {/* 标题和发起交易按钮 */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-bold text-white">{t('transactions.title') || 'Transaction Management'}</h2>
           <p className="text-primary-gray mt-1">{t('transactions.subtitle') || 'Manage all your multi-signature transactions'}</p>
         </div>
-        <button
-          onClick={() => setShowTransferModal(true)}
-          className="flex items-center gap-2 px-4 sm:px-6 py-3 bg-gradient-to-r from-primary-light to-primary-gray text-primary-black rounded-lg sm:rounded-xl hover:shadow-lg hover:shadow-primary-light/20 transition-all font-semibold text-sm sm:text-base min-h-[44px]"
-        >
-          <Send className="w-5 h-5" />
-          {t('transfer.title') || 'Initiate Transfer'}
-        </button>
+        <div className="flex flex-col items-end gap-2">
+          {currentContractAddress && isCurrentWalletOwner === false && (
+            <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500/20 border border-yellow-500/50 rounded-lg text-yellow-400 text-sm">
+              <AlertCircle className="w-4 h-4" />
+              <span>{t('transactions.notOwnerWarning') || 'Current wallet is not an owner of this contract. Cannot initiate transfers.'}</span>
+            </div>
+          )}
+          <button
+            onClick={() => setShowTransferModal(true)}
+            disabled={!!(currentContractAddress && isCurrentWalletOwner === false)}
+            className={`flex items-center gap-2 px-4 sm:px-6 py-3 rounded-lg sm:rounded-xl hover:shadow-lg transition-all font-semibold text-sm sm:text-base min-h-[44px] ${
+              currentContractAddress && isCurrentWalletOwner === false
+                ? 'bg-primary-gray/30 text-primary-gray cursor-not-allowed opacity-50'
+                : 'bg-gradient-to-r from-primary-light to-primary-gray text-primary-black hover:shadow-primary-light/20'
+            }`}
+          >
+            <Send className="w-5 h-5" />
+            {t('transfer.title') || 'Initiate Transfer'}
+          </button>
+        </div>
       </div>
 
       {/* Tab切换 */}

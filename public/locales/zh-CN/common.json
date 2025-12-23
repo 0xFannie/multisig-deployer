@@ -209,7 +209,8 @@
     "confirmingTransaction": "确认交易中...",
     "revokingConfirmation": "撤销确认中...",
     "executingTransaction": "执行交易中...",
-    "removed": "已移除"
+    "removed": "已移除",
+    "notOwnerWarning": "当前钱包不是该合约的所有者，无法发起转账"
   },
   "common": {
     "loading": "加载中...",

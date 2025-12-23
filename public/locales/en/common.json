@@ -209,7 +209,8 @@
     "confirmingTransaction": "Confirming transaction...",
     "revokingConfirmation": "Revoking confirmation...",
     "executingTransaction": "Executing transaction...",
-    "removed": "Removed"
+    "removed": "Removed",
+    "notOwnerWarning": "Current wallet is not an owner of this contract. Cannot initiate transfers."
   },
   "common": {
     "loading": "Loading...",
