@@ -359,7 +359,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         current_confirmations: 0,
         required_confirmations: deployment.threshold,
         is_whitelisted_recipient: isWhitelisted,
-        expiration_time: expirationTime ? new Date(Number(expirationTime) * 1000).toISOString() : null
+        expiration_time: expirationTime 
+          ? (() => {
+              // expirationTime 可能是 Unix 时间戳（秒）或 ISO 字符串
+              // 先尝试作为数字（Unix 时间戳）解析
+              const timestamp = Number(expirationTime)
+              if (!isNaN(timestamp) && timestamp > 0) {
+                // 是有效的数字，作为 Unix 时间戳处理
+                return new Date(timestamp * 1000).toISOString()
+              } else {
+                // 可能是 ISO 字符串，直接使用
+                try {
+                  const date = new Date(expirationTime)
+                  if (!isNaN(date.getTime())) {
+                    return date.toISOString()
+                  }
+                } catch (e) {
+                  console.error('Failed to parse expirationTime:', expirationTime, e)
+                }
+                return null
+              }
+            })()
+          : null
       }])
       .select()
 

@@ -861,6 +861,12 @@ export function TransferModal({
       if (userId) {
         try {
           // 提交交易记录
+          // 如果使用 3 参数版本（旧合约），expirationTime 应该为 null
+          // 否则，发送 Unix 时间戳（秒）而不是 ISO 字符串
+          const expirationTimeForAPI = use4Params && expirationDays !== null && expirationDays > 0
+            ? expirationTime.toString() // Unix 时间戳（秒），已经是 bigint
+            : null
+          
           const submitResponse = await fetch('/api/transactions/submit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -875,9 +881,7 @@ export function TransferModal({
               assetAddress: selectedAsset === 'native' ? null : selectedAssetOption.address,
               submittedBy: address,
               transactionHash: hash,
-              expirationTime: expirationDays !== null && expirationDays > 0 
-                ? new Date(Date.now() + expirationDays * 24 * 60 * 60 * 1000).toISOString()
-                : null,
+              expirationTime: expirationTimeForAPI,
             }),
           })
 
