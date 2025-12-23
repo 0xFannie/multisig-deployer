@@ -641,6 +641,18 @@ export function TransferModal({
         throw new Error('Invalid transfer value: must be greater than 0')
       }
 
+      // 验证合约是否支持 submitTransaction 函数（检查合约代码）
+      try {
+        const contractCode = await publicClient!.getBytecode({ address: contractAddress as `0x${string}` })
+        if (!contractCode || contractCode === '0x') {
+          throw new Error('Contract address does not contain code. Please verify the contract address.')
+        }
+        console.log('Contract code verified, bytecode length:', contractCode.length)
+      } catch (error: any) {
+        console.error('Contract verification failed:', error)
+        throw new Error(`Failed to verify contract: ${error.message}`)
+      }
+      
       // 调用合约的 submitTransaction
       // 使用 simulateContract 先模拟执行，获取更详细的错误信息
       console.log('=== Starting transaction simulation ===')
@@ -648,7 +660,9 @@ export function TransferModal({
         address: contractAddress,
         functionName: 'submitTransaction',
         args: [toAddress, value.toString(), data, expirationTime.toString()],
-        account: address
+        account: address,
+        expirationTimeValue: expirationTime.toString(),
+        expirationTimeIsZero: expirationTime === 0n
       })
       try {
         const simulationResult = await publicClient!.simulateContract({
