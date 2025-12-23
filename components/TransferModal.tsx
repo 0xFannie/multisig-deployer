@@ -693,17 +693,34 @@ export function TransferModal({
         console.log('Transaction simulation successful:', simulationResult)
       } catch (simError: any) {
         console.error('Transaction simulation failed:', simError)
-        console.error('Full simulation error object:', JSON.stringify(simError, null, 2))
+        
+        // 安全地序列化错误对象（处理 BigInt）
+        const safeStringify = (obj: any, space?: number): string => {
+          return JSON.stringify(obj, (key, value) => {
+            if (typeof value === 'bigint') {
+              return value.toString()
+            }
+            return value
+          }, space)
+        }
+        
+        try {
+          console.error('Full simulation error object:', safeStringify(simError, 2))
+        } catch (e) {
+          console.error('Failed to stringify error object:', e)
+        }
+        
         console.error('Simulation error details:', {
           message: simError?.message,
           shortMessage: simError?.shortMessage,
-          cause: simError?.cause,
+          cause: simError?.cause ? {
+            message: simError.cause?.message,
+            shortMessage: simError.cause?.shortMessage,
+            reason: simError.cause?.reason,
+            data: simError.cause?.data,
+            dataArgs: simError.cause?.data?.args,
+          } : null,
           data: simError?.data,
-          reason: simError?.cause?.reason,
-          dataArgs: simError?.cause?.data?.args,
-          causeMessage: simError?.cause?.message,
-          causeShortMessage: simError?.cause?.shortMessage,
-          causeData: simError?.cause?.data,
         })
         
         // 尝试多种方式提取 revert reason
@@ -733,8 +750,26 @@ export function TransferModal({
         // 检查是否是常见的 revert 原因
         if (revertReason.includes('not owner')) {
           revertReason = 'You are not an owner of this multisig wallet'
-        } else if (revertReason.includes('expiration time')) {
-          revertReason = 'Invalid expiration time. Please check the expiration date.'
+        } else if (revertReason.includes('expiration time') || revertReason.includes('must be in the future')) {
+          // 检查过期时间是否真的在未来
+          const currentBlock = await publicClient!.getBlock().catch(() => null)
+          if (currentBlock) {
+            const currentTimestamp = Number(currentBlock.timestamp)
+            const expirationTimestamp = Number(expirationTime)
+            console.error('Expiration time validation failed:', {
+              currentTimestamp,
+              expirationTimestamp,
+              isValid: expirationTimestamp > currentTimestamp,
+              difference: expirationTimestamp - currentTimestamp
+            })
+            if (expirationTimestamp <= currentTimestamp) {
+              revertReason = `Expiration time (${expirationTimestamp}) is not in the future. Current block timestamp: ${currentTimestamp}`
+            } else {
+              revertReason = 'Expiration time validation failed unexpectedly. Please try again or contact support.'
+            }
+          } else {
+            revertReason = 'Invalid expiration time. Please check the expiration date.'
+          }
         } else if (revertReason.includes('execution reverted')) {
           // 尝试从错误数据中提取更多信息
           const errorData = simError?.cause?.data
