@@ -660,6 +660,7 @@ export function TransferModal({
         console.log('Transaction simulation successful:', simulationResult)
       } catch (simError: any) {
         console.error('Transaction simulation failed:', simError)
+        console.error('Full simulation error object:', JSON.stringify(simError, null, 2))
         console.error('Simulation error details:', {
           message: simError?.message,
           shortMessage: simError?.shortMessage,
@@ -667,18 +668,51 @@ export function TransferModal({
           data: simError?.data,
           reason: simError?.cause?.reason,
           dataArgs: simError?.cause?.data?.args,
+          causeMessage: simError?.cause?.message,
+          causeShortMessage: simError?.cause?.shortMessage,
+          causeData: simError?.cause?.data,
         })
         
-        // 提取 revert reason
+        // 尝试多种方式提取 revert reason
         let revertReason = 'Unknown revert reason'
-        if (simError?.cause?.data?.args?.[0]) {
-          revertReason = simError.cause.data.args[0]
-        } else if (simError?.cause?.reason) {
-          revertReason = simError.cause.reason
-        } else if (simError?.shortMessage) {
+        
+        // 方法1: 从 cause.data.args 提取（Solidity 自定义错误）
+        if (simError?.cause?.data?.args && simError.cause.data.args.length > 0) {
+          revertReason = String(simError.cause.data.args[0])
+        }
+        // 方法2: 从 cause.reason 提取
+        else if (simError?.cause?.reason) {
+          revertReason = String(simError.cause.reason)
+        }
+        // 方法3: 从 cause.message 提取
+        else if (simError?.cause?.message) {
+          revertReason = String(simError.cause.message)
+        }
+        // 方法4: 从 shortMessage 提取
+        else if (simError?.shortMessage) {
           revertReason = simError.shortMessage
-        } else if (simError?.message) {
+        }
+        // 方法5: 从 message 提取
+        else if (simError?.message) {
           revertReason = simError.message
+        }
+        
+        // 检查是否是常见的 revert 原因
+        if (revertReason.includes('not owner')) {
+          revertReason = 'You are not an owner of this multisig wallet'
+        } else if (revertReason.includes('expiration time')) {
+          revertReason = 'Invalid expiration time. Please check the expiration date.'
+        } else if (revertReason.includes('execution reverted')) {
+          // 尝试从错误数据中提取更多信息
+          const errorData = simError?.cause?.data
+          if (errorData) {
+            console.error('Error data structure:', errorData)
+            // 如果是自定义错误，尝试解析
+            if (errorData.errorName) {
+              revertReason = `Contract error: ${errorData.errorName}`
+            }
+          }
+          revertReason = 'Contract execution reverted. This may be due to insufficient permissions or invalid parameters.'
         }
         
         const errorMessage = `Transaction would fail: ${revertReason}`
