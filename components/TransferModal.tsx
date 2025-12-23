@@ -492,17 +492,27 @@ export function TransferModal({
       }
 
       // 准备交易数据
-      const value = selectedAsset === 'native'
-        ? parseEther(amount)
-        : BigInt(0)
+      // 对于原生代币：_to = recipient, _value = amount, _data = 0x
+      // 对于 ERC20 代币：_to = token contract, _value = 0, _data = transfer(recipient, amount)
+      let toAddress: `0x${string}`
+      let value: bigint
+      let data: `0x${string}`
       
-      const data = selectedAsset === 'native'
-        ? '0x'
-        : encodeFunctionData({
-            abi: erc20Abi,
-            functionName: 'transfer',
-            args: [recipient as `0x${string}`, parseUnits(amount, selectedAssetOption.decimals)],
-          })
+      if (selectedAsset === 'native') {
+        // 原生代币转账
+        toAddress = recipient as `0x${string}`
+        value = parseEther(amount)
+        data = '0x'
+      } else {
+        // ERC20 代币转账
+        toAddress = selectedAssetOption.address as `0x${string}`
+        value = BigInt(0)
+        data = encodeFunctionData({
+          abi: erc20Abi,
+          functionName: 'transfer',
+          args: [recipient as `0x${string}`, parseUnits(amount, selectedAssetOption.decimals)],
+        })
+      }
 
       // 计算过期时间（如果设置了）
       let expirationTime = 0n // 0 表示永不过期
@@ -512,15 +522,24 @@ export function TransferModal({
         expirationTime = BigInt(Math.floor(expirationDate.getTime() / 1000)) // 转换为 Unix 时间戳（秒）
       }
 
+      console.log('Submitting transaction with args:', {
+        to: toAddress,
+        value: value.toString(),
+        data: data,
+        expirationTime: expirationTime.toString(),
+        recipient: recipient,
+        assetType: selectedAsset
+      })
+
       // 调用合约的 submitTransaction
       const hash = await walletClient.writeContract({
         address: contractAddress as `0x${string}`,
         abi: MultiSigWalletABI.abi,
         functionName: 'submitTransaction',
         args: [
-          selectedAsset === 'native' ? '0x0000000000000000000000000000000000000000' : (selectedAssetOption.address as `0x${string}`),
+          toAddress,
           value,
-          data as `0x${string}`,
+          data,
           expirationTime,
         ],
         account: address as `0x${string}`,
