@@ -4,7 +4,7 @@ import { useTranslation } from 'next-i18next'
 import { X, Send, Wallet, AlertCircle, Mail, CheckCircle2, ChevronDown, User, Loader, Search, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
 import MultiSigWalletABI from '../artifacts/contracts/MultiSigWallet.sol/MultiSigWallet.json'
-import { parseEther, formatEther, formatUnits, parseUnits, erc20Abi, encodeFunctionData, decodeErrorResult } from 'viem'
+import { parseEther, formatEther, formatUnits, parseUnits, erc20Abi, encodeFunctionData, decodeErrorResult, encodeAbiParameters, parseAbiParameters } from 'viem'
 import { SUPPORTED_NETWORKS } from './DeployedContractsList'
 import { getTokenAddress } from '../lib/tokenAddresses'
 
@@ -720,210 +720,65 @@ export function TransferModal({
       // expirationTime 已经是 bigint 类型，直接使用
       console.log('Expiration time as BigInt:', expirationTime.toString())
       
+      // 先尝试 4 参数版本（支持 expirationTime）
+      // 如果失败，回退到 3 参数版本（旧版本合约）
+      let simulationResult: any = null
+      let use4Params = true
+      let contractSupportsExpirationTimeParam = false
+      
       try {
-        const simulationResult = await publicClient!.simulateContract({
+        console.log('Trying 4-parameter submitTransaction (with expirationTime)...')
+        simulationResult = await publicClient!.simulateContract({
           address: contractAddress as `0x${string}`,
           abi: MultiSigWalletABI.abi,
           functionName: 'submitTransaction',
-          args: [
-            toAddress,
-            value,
-            data,
-            expirationTime,
-          ],
+          args: [toAddress, value, data, expirationTime],
           account: address as `0x${string}`,
         })
-        console.log('Transaction simulation successful:', simulationResult)
-      } catch (simError: any) {
-        console.error('Transaction simulation failed:', simError)
+        console.log('✅ Transaction simulation successful with 4 parameters:', simulationResult)
+        contractSupportsExpirationTimeParam = true
+      } catch (simError4: any) {
+        console.warn('⚠️ 4-parameter submitTransaction failed, trying 3-parameter version...')
+        console.warn('Error:', simError4?.shortMessage || simError4?.message)
         
-        // 安全地序列化错误对象（处理 BigInt）
-        const safeStringify = (obj: any, space?: number): string => {
-          return JSON.stringify(obj, (key, value) => {
-            if (typeof value === 'bigint') {
-              return value.toString()
-            }
-            return value
-          }, space)
-        }
-        
+        // 回退到 3 参数版本
         try {
-          console.error('Full simulation error object:', safeStringify(simError, 2))
-        } catch (e) {
-          console.error('Failed to stringify error object:', e)
-        }
-        
-        console.error('Simulation error details:', {
-          message: simError?.message,
-          shortMessage: simError?.shortMessage,
-          cause: simError?.cause ? {
-            message: simError.cause?.message,
-            shortMessage: simError.cause?.shortMessage,
-            reason: simError.cause?.reason,
-            data: simError.cause?.data,
-            dataArgs: simError.cause?.data?.args,
-          } : null,
-          data: simError?.data,
-        })
-        
-        // 尝试多种方式提取 revert reason
-        let revertReason = 'Unknown revert reason'
-        
-        // 方法0: 尝试使用 decodeErrorResult 解析错误数据
-        try {
-          const errorData = simError?.cause?.data || simError?.data
-          const rawData = simError?.cause?.raw || simError?.raw
-          
-          console.error('Error data for decoding:', { 
-            errorData, 
-            rawData,
-            hasErrorData: !!errorData,
-            hasRawData: !!rawData && rawData !== '0x' && rawData !== '0x0'
+          console.log('Trying 3-parameter submitTransaction (old version, expirationTime will be ignored)...')
+          simulationResult = await publicClient!.simulateContract({
+            address: contractAddress as `0x${string}`,
+            abi: MultiSigWalletABI.abi,
+            functionName: 'submitTransaction',
+            args: [toAddress, value, data],
+            account: address as `0x${string}`,
           })
+          console.log('✅ Transaction simulation successful with 3 parameters:', simulationResult)
+          contractSupportsExpirationTimeParam = false
+          use4Params = false
           
-          // 如果 raw 是 "0x"，说明合约 revert 时没有返回错误数据
-          // 这通常意味着使用了 revert() 而不是 revert("message")
-          // 或者合约版本不匹配（部署的合约可能不支持 _expirationTime 参数）
-          if (rawData === '0x' || rawData === '0x0' || !rawData) {
-            console.error('⚠️ Contract reverted without error data (raw: "0x"). This usually means:')
-            console.error('1. Contract version mismatch (deployed contract may not support _expirationTime parameter)')
-            console.error('2. Contract used revert() instead of revert("message")')
-            console.error('3. Other validation failed silently')
-            
-            // 检查合约是否支持 expirationTime 参数
-            // 通过尝试读取现有交易来验证
-            try {
-              const txCount = await publicClient!.readContract({
-                address: contractAddress as `0x${string}`,
-                abi: MultiSigWalletABI.abi,
-                functionName: 'getTransactionCount',
-              }) as bigint
-              
-              if (txCount > 0n) {
-                const testTx = await publicClient!.readContract({
-                  address: contractAddress as `0x${string}`,
-                  abi: MultiSigWalletABI.abi,
-                  functionName: 'getTransaction',
-                  args: [0n],
-                }) as [string, bigint, string, boolean, bigint, bigint]
-                
-                // 检查返回的 transaction 是否有 expirationTime 字段（应该是第6个元素，索引5）
-                if (testTx && Array.isArray(testTx) && testTx.length >= 6) {
-                  const expirationTimeFromContract = testTx[5]
-                  console.error('Contract supports expirationTime:', expirationTimeFromContract !== undefined, 'Value:', expirationTimeFromContract?.toString())
-                  
-                  if (expirationTimeFromContract === undefined) {
-                    revertReason = 'Contract version mismatch: The deployed contract does not support expirationTime parameter. Please redeploy the contract with the latest version.'
-                  }
-                } else {
-                  console.error('⚠️ Contract transaction structure does not match expected format:', testTx)
-                  revertReason = 'Contract version mismatch: The deployed contract structure does not match the expected format. Please redeploy the contract with the latest version.'
-                }
-              } else {
-                console.error('⚠️ No transactions in contract, cannot verify expirationTime support')
-                revertReason = 'Contract version mismatch: Cannot verify if contract supports expirationTime. The deployed contract may not support the _expirationTime parameter. Please redeploy the contract with the latest version.'
-              }
-            } catch (checkError: any) {
-              console.error('Failed to check contract compatibility:', checkError)
-              revertReason = 'Contract version mismatch: Failed to verify contract compatibility. The deployed contract may not support the _expirationTime parameter. Please redeploy the contract with the latest version.'
-            }
-          } else if (errorData && typeof errorData === 'object' && 'data' in errorData && errorData.data) {
-            const decoded = decodeErrorResult({
-              abi: MultiSigWalletABI.abi,
-              data: errorData.data as `0x${string}`,
-            })
-            revertReason = decoded.errorName || decoded.args?.[0]?.toString() || 'Decoded contract error'
-            console.error('Decoded error:', decoded)
-          } else if (rawData && rawData !== '0x' && rawData !== '0x0') {
-            // 尝试直接解码 raw 数据
-            try {
-              const decoded = decodeErrorResult({
-                abi: MultiSigWalletABI.abi,
-                data: rawData as `0x${string}`,
-              })
-              revertReason = decoded.errorName || decoded.args?.[0]?.toString() || 'Decoded contract error'
-              console.error('Decoded error from raw:', decoded)
-            } catch (rawDecodeError) {
-              console.error('Failed to decode raw error data:', rawDecodeError)
-            }
+          // 如果用户设置了过期时间，但合约不支持，给出警告
+          if (expirationTime !== 0n) {
+            console.warn('⚠️ Contract does not support expirationTime parameter. Expiration time will be ignored.')
+            toast.error(t('transfer.contractDoesNotSupportExpiration') || 'This contract does not support expiration time. The transaction will be submitted without expiration.')
           }
-        } catch (decodeError) {
-          console.error('Failed to decode error result:', decodeError)
+        } catch (simError3: any) {
+          // 3 参数版本也失败，抛出错误
+          console.error('❌ Both 4-parameter and 3-parameter submitTransaction failed')
+          throw simError3 // 抛出 3 参数版本的错误（更可能是真正的错误）
         }
-        
-        // 方法1: 从 cause.data.args 提取（Solidity 自定义错误）
-        if (revertReason === 'Unknown revert reason' && simError?.cause?.data?.args && simError.cause.data.args.length > 0) {
-          revertReason = String(simError.cause.data.args[0])
-        }
-        // 方法2: 从 cause.reason 提取
-        else if (revertReason === 'Unknown revert reason' && simError?.cause?.reason) {
-          revertReason = String(simError.cause.reason)
-        }
-        // 方法3: 从 cause.message 提取
-        else if (revertReason === 'Unknown revert reason' && simError?.cause?.message) {
-          revertReason = String(simError.cause.message)
-        }
-        // 方法4: 从 shortMessage 提取
-        else if (revertReason === 'Unknown revert reason' && simError?.shortMessage) {
-          revertReason = simError.shortMessage
-        }
-        // 方法5: 从 message 提取
-        else if (revertReason === 'Unknown revert reason' && simError?.message) {
-          revertReason = simError.message
-        }
-        
-        // 检查是否是常见的 revert 原因
-        if (revertReason.includes('not owner')) {
-          revertReason = 'You are not an owner of this multisig wallet'
-        } else if (revertReason.includes('expiration time') || revertReason.includes('must be in the future')) {
-          // 检查过期时间是否真的在未来
-          const currentBlock = await publicClient!.getBlock().catch(() => null)
-          if (currentBlock) {
-            const currentTimestamp = Number(currentBlock.timestamp)
-            const expirationTimestamp = Number(expirationTime)
-            console.error('Expiration time validation failed:', {
-              currentTimestamp,
-              expirationTimestamp,
-              isValid: expirationTimestamp > currentTimestamp,
-              difference: expirationTimestamp - currentTimestamp
-            })
-            if (expirationTimestamp <= currentTimestamp) {
-              revertReason = `Expiration time (${expirationTimestamp}) is not in the future. Current block timestamp: ${currentTimestamp}`
-            } else {
-              revertReason = 'Expiration time validation failed unexpectedly. Please try again or contact support.'
-            }
-          } else {
-            revertReason = 'Invalid expiration time. Please check the expiration date.'
-          }
-        } else if (revertReason.includes('execution reverted')) {
-          // 尝试从错误数据中提取更多信息
-          const errorData = simError?.cause?.data
-          if (errorData) {
-            console.error('Error data structure:', errorData)
-            // 如果是自定义错误，尝试解析
-            if (errorData.errorName) {
-              revertReason = `Contract error: ${errorData.errorName}`
-            }
-          }
-          revertReason = 'Contract execution reverted. This may be due to insufficient permissions or invalid parameters.'
-        }
-        
-        const errorMessage = `Transaction would fail: ${revertReason}`
-        console.error('Throwing error:', errorMessage)
-        throw new Error(errorMessage)
       }
       
       console.log('Simulation passed, submitting actual transaction...')
+      const submitArgs = use4Params
+        ? [toAddress, value, data, expirationTime]
+        : [toAddress, value, data]
+      
+      console.log('Submitting with', submitArgs.length, 'parameters')
+      
       const hash = await walletClient.writeContract({
         address: contractAddress as `0x${string}`,
         abi: MultiSigWalletABI.abi,
         functionName: 'submitTransaction',
-        args: [
-          toAddress,
-          value,
-          data,
-          expirationTime,
-        ],
+        args: submitArgs as any,
         account: address as `0x${string}`,
       })
 
