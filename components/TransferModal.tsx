@@ -616,6 +616,31 @@ export function TransferModal({
       }
 
       // 调用合约的 submitTransaction
+      // 使用 simulateContract 先模拟执行，获取更详细的错误信息
+      try {
+        await publicClient!.simulateContract({
+          address: contractAddress as `0x${string}`,
+          abi: MultiSigWalletABI.abi,
+          functionName: 'submitTransaction',
+          args: [
+            toAddress,
+            value,
+            data,
+            expirationTime,
+          ],
+          account: address as `0x${string}`,
+        })
+        console.log('Transaction simulation successful')
+      } catch (simError: any) {
+        console.error('Transaction simulation failed:', simError)
+        // 提取 revert reason
+        const revertReason = simError?.cause?.data?.args?.[0] || 
+                            simError?.cause?.reason || 
+                            simError?.shortMessage ||
+                            'Unknown revert reason'
+        throw new Error(`Transaction would fail: ${revertReason}`)
+      }
+      
       const hash = await walletClient.writeContract({
         address: contractAddress as `0x${string}`,
         abi: MultiSigWalletABI.abi,
