@@ -9,12 +9,11 @@ const nextConfig = {
   },
   webpack: (config, { isServer }) => {
     // 忽略 React Native 依赖（@metamask/sdk 需要但 Next.js 不需要）
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        '@react-native-async-storage/async-storage': false,
-      }
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      '@react-native-async-storage/async-storage': false,
     }
+    
     // 添加别名来忽略这个模块
     config.resolve.alias = {
       ...config.resolve.alias,
@@ -24,7 +23,6 @@ const nextConfig = {
     // 处理 vanilla-extract/sprinkles 的 CommonJS/ESM 兼容性问题
     if (isServer) {
       config.externals = config.externals || []
-      // 在服务器端，将 RainbowKit 相关的模块标记为外部依赖或使用 CommonJS 解析
       config.resolve.alias = {
         ...config.resolve.alias,
         '@vanilla-extract/sprinkles/createUtils': require.resolve('@vanilla-extract/sprinkles/createUtils'),

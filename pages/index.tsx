@@ -1,6 +1,6 @@
 ﻿import Head from 'next/head'
 import { useState, useEffect } from 'react'
-import { useAccount, useChainId, useSwitchChain, useConnect, useConnectors } from 'wagmi'
+import { useAccount, useChainId, useSwitchChain } from 'wagmi'
 import dynamic from 'next/dynamic'
 import { Eye, Plus, Send, Shield, Users, Lock, Settings, Zap } from 'lucide-react'
 import { useRouter } from 'next/router'
@@ -59,11 +59,6 @@ export default function Home() {
         setActiveTab('transactions')
       } else if (router.query.tab === 'deploy') {
         setActiveTab('deploy')
-      }
-      
-      // 自动切换到查看或交易管理页面
-      if (router.query.tab === 'transactions') {
-        setActiveTab('transactions')
       } else {
         setActiveTab('view')
       }
