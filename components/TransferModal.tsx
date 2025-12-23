@@ -637,7 +637,13 @@ export function TransferModal({
 
       // 调用合约的 submitTransaction
       // 使用 simulateContract 先模拟执行，获取更详细的错误信息
-      console.log('Starting transaction simulation...')
+      console.log('=== Starting transaction simulation ===')
+      console.log('Simulation parameters:', {
+        address: contractAddress,
+        functionName: 'submitTransaction',
+        args: [toAddress, value.toString(), data, expirationTime.toString()],
+        account: address
+      })
       try {
         const simulationResult = await publicClient!.simulateContract({
           address: contractAddress as `0x${string}`,
