@@ -399,6 +399,16 @@
     "madeWith": "Made with",
     "by": "by",
     "description": "开源项目 · 完全免费 · 持续更新"
+  },
+  "auth": {
+    "authorizeWallet": "授权钱包",
+    "authorizeDescription": "请签名此消息以授权 MultiSig Wallet Deployer 访问您的钱包信息。此签名不会授予任何交易权限。",
+    "messageToSign": "待签名消息：",
+    "signMessage": "签名消息",
+    "signing": "签名中...",
+    "signatureSuccess": "钱包授权成功！",
+    "signatureRejected": "签名已被拒绝",
+    "signatureFailed": "钱包授权失败"
   }
 }
 

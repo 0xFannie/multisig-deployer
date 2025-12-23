@@ -399,6 +399,16 @@
     "madeWith": "Made with",
     "by": "by",
     "description": "Open source project · Completely free · Continuous updates"
+  },
+  "auth": {
+    "authorizeWallet": "Authorize Wallet",
+    "authorizeDescription": "Please sign this message to authorize MultiSig Wallet Deployer to access your wallet information. This signature does not grant any transaction permissions.",
+    "messageToSign": "Message to sign:",
+    "signMessage": "Sign Message",
+    "signing": "Signing...",
+    "signatureSuccess": "Wallet authorized successfully!",
+    "signatureRejected": "Signature was rejected",
+    "signatureFailed": "Failed to authorize wallet"
   }
 }
 

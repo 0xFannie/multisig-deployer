@@ -86,32 +86,39 @@ export function TransactionManager({ initialContract, initialChainId }: Transact
     }
   }, [])
 
-  // 获取或创建用户ID
+  // 获取用户ID（从 localStorage 或 state）
   const getOrCreateUserId = async (): Promise<string | null> => {
     if (userId) return userId
     if (!address) return null
 
-    try {
-      const response = await fetch('/api/users/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress: address })
-      })
+    // 从 localStorage 读取 userId
+    const savedUserId = localStorage.getItem('multisig_user_id')
+    if (savedUserId) {
+      // 验证 userId 是否有效（通过检查钱包地址是否匹配）
+      try {
+        const response = await fetch('/api/users/get-info', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: savedUserId })
+        })
 
-      if (!response.ok) {
-        console.error('Failed to get or create user ID')
-        return null
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && data.user?.wallet_address?.toLowerCase() === address.toLowerCase()) {
+            setUserId(savedUserId)
+            return savedUserId
+          } else {
+            // 钱包地址不匹配，清除无效的 userId
+            localStorage.removeItem('multisig_user_id')
+          }
+        }
+      } catch (error) {
+        console.error('Error validating user ID:', error)
       }
-
-      const data = await response.json()
-      if (data.success && data.userId) {
-        localStorage.setItem('multisig_user_id', data.userId)
-        setUserId(data.userId)
-        return data.userId
-      }
-    } catch (error) {
-      console.error('Error getting user ID:', error)
     }
+
+    // 如果没有有效的 userId，返回 null（用户需要先完成签名授权）
+    console.warn('User ID not available. Please complete wallet authorization first.')
     return null
   }
 

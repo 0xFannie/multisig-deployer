@@ -23,6 +23,7 @@ import { TransactionManager } from '../components/TransactionManager'
 import { DeployedContractsList } from '../components/DeployedContractsList'
 import { UserSettings } from '../components/UserSettings'
 import MultisigWorkflow from '../components/MultisigWorkflow'
+import { SignatureAuthModal } from '../components/SignatureAuthModal'
 
 export default function Home() {
   const { t, ready } = useTranslation('common')
@@ -34,10 +35,45 @@ export default function Home() {
   const { address, isConnected } = useAccount()
   const chainId = useChainId()
   const { switchChain } = useSwitchChain()
+  const [showSignatureModal, setShowSignatureModal] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // 检查用户是否需要签名授权
+  useEffect(() => {
+    if (isConnected && address && !userId) {
+      // 检查 localStorage 中是否有 userId
+      const savedUserId = localStorage.getItem('multisig_user_id')
+      if (savedUserId) {
+        // 验证 userId 是否有效
+        fetch('/api/users/get-info', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: savedUserId })
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && data.user?.wallet_address?.toLowerCase() === address.toLowerCase()) {
+              setUserId(savedUserId)
+            } else {
+              // userId 无效或钱包地址不匹配，需要重新授权
+              localStorage.removeItem('multisig_user_id')
+              setShowSignatureModal(true)
+            }
+          })
+          .catch(() => {
+            // 检查失败，显示签名模态框
+            setShowSignatureModal(true)
+          })
+      } else {
+        // 没有 userId，需要签名授权
+        setShowSignatureModal(true)
+      }
+    }
+  }, [isConnected, address, userId])
 
 
   // 从 URL 参数获取合约地址
@@ -304,6 +340,19 @@ export default function Home() {
 
         </div>
       </div>
+
+      {/* 签名授权模态框 */}
+      <SignatureAuthModal
+        isOpen={showSignatureModal}
+        onSuccess={(newUserId) => {
+          setUserId(newUserId)
+          setShowSignatureModal(false)
+        }}
+        onClose={() => {
+          // 用户关闭模态框，但不强制要求签名（允许稍后签名）
+          setShowSignatureModal(false)
+        }}
+      />
     </>
   )
 }
