@@ -35,14 +35,68 @@ export function UserSettings() {
 
   // 加载用户信息
   useEffect(() => {
-    if (!isConnected || !address) return
+    if (!isConnected || !address) {
+      // 如果钱包未连接，清除状态和 localStorage
+      setUserId(null)
+      setUserEmail(null)
+      setEmailVerified(false)
+      setWhitelist([])
+      localStorage.removeItem('multisig_user_id')
+      return
+    }
 
     const loadUser = async () => {
       setLoading(true)
+      
       // 先尝试从 localStorage 获取
       let savedUserId = localStorage.getItem('multisig_user_id')
       
-      // 如果没有 userId，通过 API 获取用户（根据钱包地址）
+      // 验证 localStorage 中的 userId 是否属于当前钱包地址
+      if (savedUserId) {
+        try {
+          console.log('Validating saved userId:', savedUserId, 'for wallet:', address)
+          const validateResponse = await fetch('/api/users/get-info', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: savedUserId }),
+          })
+          
+          if (validateResponse.ok) {
+            const validateData = await validateResponse.json()
+            if (validateData.success && validateData.user) {
+              const savedWalletAddress = validateData.user.wallet_address?.toLowerCase()
+              const currentWalletAddress = address.toLowerCase()
+              
+              // 如果钱包地址不匹配，清除 localStorage 并重新获取
+              if (savedWalletAddress !== currentWalletAddress) {
+                console.warn('Wallet address mismatch! Saved:', savedWalletAddress, 'Current:', currentWalletAddress)
+                console.log('Clearing localStorage and fetching new user...')
+                localStorage.removeItem('multisig_user_id')
+                savedUserId = null
+              } else {
+                console.log('Saved userId is valid for current wallet address')
+              }
+            } else {
+              // userId 无效，清除
+              console.warn('Saved userId is invalid, clearing localStorage')
+              localStorage.removeItem('multisig_user_id')
+              savedUserId = null
+            }
+          } else {
+            // API 调用失败，清除并重新获取
+            console.warn('Failed to validate saved userId, clearing localStorage')
+            localStorage.removeItem('multisig_user_id')
+            savedUserId = null
+          }
+        } catch (error) {
+          console.error('Error validating saved userId:', error)
+          // 验证失败，清除并重新获取
+          localStorage.removeItem('multisig_user_id')
+          savedUserId = null
+        }
+      }
+      
+      // 如果没有有效的 userId，通过 API 获取用户（根据钱包地址）
       if (!savedUserId) {
         // 使用专门的 API 端点，根据钱包地址查找用户，不需要签名验证
         try {
@@ -94,12 +148,17 @@ export function UserSettings() {
         await loadWhitelist(savedUserId)
       } else {
         console.warn('User ID not found. User may need to interact with the app first.')
+        // 清除状态
+        setUserId(null)
+        setUserEmail(null)
+        setEmailVerified(false)
+        setWhitelist([])
       }
       setLoading(false)
     }
     
     loadUser()
-  }, [isConnected, address])
+  }, [isConnected, address, ready, t])
 
   const loadUserInfo = async (uid: string | null) => {
     if (!uid) {
