@@ -530,12 +530,18 @@ export function TransferModal({
             expirationTimestamp,
             expirationTime: expirationTime.toString(),
             expirationDate: new Date(expirationTimestamp * 1000).toISOString(),
-            currentDate: new Date(currentBlockTimestamp * 1000).toISOString()
+            currentDate: new Date(currentBlockTimestamp * 1000).toISOString(),
+            isValid: expirationTimestamp > currentBlockTimestamp
           })
           
           // 验证过期时间是否在未来
           if (expirationTimestamp <= currentBlockTimestamp) {
             throw new Error(`Calculated expiration time (${expirationTimestamp}) is not in the future. Current block timestamp: ${currentBlockTimestamp}`)
+          }
+          
+          // 额外验证：确保过期时间足够大（至少比当前时间大 1 秒）
+          if (expirationTimestamp <= currentBlockTimestamp + 1) {
+            console.warn('Expiration time is very close to current time, may cause issues')
           }
         } catch (error: any) {
           console.error('Failed to calculate expiration time:', error)
