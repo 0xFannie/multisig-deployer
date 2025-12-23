@@ -655,7 +655,7 @@ export function TransferModal({
             address: contractAddress as `0x${string}`,
             abi: MultiSigWalletABI.abi,
             functionName: 'getTransactionCount',
-          })
+          }) as bigint
           console.log('Contract is a valid MultiSigWallet, transaction count:', Number(txCount))
         } catch (readError: any) {
           console.error('Failed to read from contract, may be wrong contract version:', readError)
@@ -676,7 +676,7 @@ export function TransferModal({
           address: contractAddress as `0x${string}`,
           abi: MultiSigWalletABI.abi,
           functionName: 'getTransactionCount',
-        })
+        }) as bigint
         console.log('Contract transaction count:', txCount.toString())
         
         if (txCount > 0n) {
@@ -685,7 +685,7 @@ export function TransferModal({
             abi: MultiSigWalletABI.abi,
             functionName: 'getTransaction',
             args: [testTxIndex],
-          })
+          }) as [string, bigint, string, boolean, bigint, bigint]
           console.log('Test transaction from contract:', testTx)
           
           // 检查返回的 transaction 是否有 expirationTime 字段
@@ -714,12 +714,11 @@ export function TransferModal({
         expirationTimeValue: expirationTime.toString(),
         expirationTimeIsZero: expirationTime === 0n,
         expirationTimeType: typeof expirationTime,
-        expirationTimeIsBigInt: expirationTime instanceof BigInt || typeof expirationTime === 'bigint'
+        expirationTimeIsBigInt: typeof expirationTime === 'bigint'
       })
       
-      // 确保 expirationTime 是 BigInt
-      const expirationTimeBigInt = typeof expirationTime === 'bigint' ? expirationTime : BigInt(expirationTime.toString())
-      console.log('Expiration time as BigInt:', expirationTimeBigInt.toString())
+      // expirationTime 已经是 bigint 类型，直接使用
+      console.log('Expiration time as BigInt:', expirationTime.toString())
       
       try {
         const simulationResult = await publicClient!.simulateContract({
@@ -730,7 +729,7 @@ export function TransferModal({
             toAddress,
             value,
             data,
-            expirationTimeBigInt,
+            expirationTime,
           ],
           account: address as `0x${string}`,
         })
@@ -798,7 +797,7 @@ export function TransferModal({
                 address: contractAddress as `0x${string}`,
                 abi: MultiSigWalletABI.abi,
                 functionName: 'getTransactionCount',
-              })
+              }) as bigint
               
               if (txCount > 0n) {
                 const testTx = await publicClient!.readContract({
@@ -806,7 +805,7 @@ export function TransferModal({
                   abi: MultiSigWalletABI.abi,
                   functionName: 'getTransaction',
                   args: [0n],
-                })
+                }) as [string, bigint, string, boolean, bigint, bigint]
                 
                 // 检查返回的 transaction 是否有 expirationTime 字段（应该是第6个元素，索引5）
                 if (testTx && Array.isArray(testTx) && testTx.length >= 6) {
@@ -939,7 +938,7 @@ export function TransferModal({
             address: contractAddress as `0x${string}`,
             abi: MultiSigWalletABI.abi,
             functionName: 'getTransactionCount',
-          })
+          }) as bigint
           txIndex = Number(txCountBefore) // 提交后的索引就是当前数量
           console.log('Transaction count before submit:', txCountBefore, 'txIndex will be:', txIndex)
         } catch (error) {
@@ -957,7 +956,7 @@ export function TransferModal({
             address: contractAddress as `0x${string}`,
             abi: MultiSigWalletABI.abi,
             functionName: 'getTransactionCount',
-          })
+          }) as bigint
           const expectedIndex = Number(txCountAfter) - 1
           if (txIndex !== expectedIndex) {
             console.warn(`Transaction index mismatch: expected ${expectedIndex}, got ${txIndex}. Using ${expectedIndex}`)
