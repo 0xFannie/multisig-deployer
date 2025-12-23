@@ -517,9 +517,40 @@ export function TransferModal({
       // 计算过期时间（如果设置了）
       let expirationTime = 0n // 0 表示永不过期
       if (expirationDays !== null && expirationDays > 0) {
-        const expirationDate = new Date()
-        expirationDate.setDate(expirationDate.getDate() + expirationDays)
-        expirationTime = BigInt(Math.floor(expirationDate.getTime() / 1000)) // 转换为 Unix 时间戳（秒）
+        // 获取当前区块时间戳（秒）
+        const currentBlockTimestamp = await publicClient!.getBlock().then(block => Number(block.timestamp))
+        const expirationTimestamp = currentBlockTimestamp + (expirationDays * 24 * 60 * 60)
+        expirationTime = BigInt(expirationTimestamp)
+        
+        console.log('Expiration time calculation:', {
+          currentBlockTimestamp,
+          expirationDays,
+          expirationTimestamp,
+          expirationTime: expirationTime.toString(),
+          expirationDate: new Date(expirationTimestamp * 1000).toISOString()
+        })
+      }
+
+      // 验证调用者是否是 owner
+      try {
+        const isOwner = await publicClient!.readContract({
+          address: contractAddress as `0x${string}`,
+          abi: MultiSigWalletABI.abi,
+          functionName: 'isOwner',
+          args: [address as `0x${string}`],
+        })
+        
+        if (!isOwner) {
+          throw new Error('You are not an owner of this multisig wallet')
+        }
+        
+        console.log('Caller is owner, proceeding with transaction submission')
+      } catch (error: any) {
+        console.error('Owner check failed:', error)
+        if (error.message?.includes('not an owner')) {
+          throw error
+        }
+        // 如果读取失败，继续尝试提交（可能是网络问题）
       }
 
       console.log('Submitting transaction with args:', {
@@ -528,7 +559,8 @@ export function TransferModal({
         data: data,
         expirationTime: expirationTime.toString(),
         recipient: recipient,
-        assetType: selectedAsset
+        assetType: selectedAsset,
+        sender: address
       })
 
       // 调用合约的 submitTransaction
@@ -677,7 +709,44 @@ export function TransferModal({
       handleClose()
     } catch (error: any) {
       console.error('Failed to submit transaction:', error)
-      toast.error(error.message || t('transfer.submitFailed') || 'Failed to submit transaction', { id: toastId })
+      console.error('Error details:', {
+        message: error?.message,
+        shortMessage: error?.shortMessage,
+        cause: error?.cause,
+        data: error?.data,
+        name: error?.name,
+        stack: error?.stack
+      })
+      
+      // 提取更详细的错误信息
+      let errorMessage = t('transfer.submitFailed') || 'Failed to submit transaction'
+      
+      if (error?.shortMessage) {
+        errorMessage = error.shortMessage
+      } else if (error?.message) {
+        errorMessage = error.message
+      }
+      
+      // 检查是否是合约 revert 错误
+      if (error?.data?.errorName === 'ContractFunctionRevertedError' || 
+          error?.cause?.name === 'ContractFunctionRevertedError') {
+        // 尝试从错误中提取 revert reason
+        const revertReason = error?.cause?.reason || error?.data?.reason || error?.cause?.data?.reason
+        if (revertReason) {
+          errorMessage = `Contract reverted: ${revertReason}`
+        } else {
+          // 常见的 revert 原因
+          if (errorMessage.includes('not owner')) {
+            errorMessage = t('transfer.notOwner') || 'You are not an owner of this multisig wallet'
+          } else if (errorMessage.includes('expiration time')) {
+            errorMessage = t('transfer.invalidExpiration') || 'Invalid expiration time. Please try again.'
+          } else {
+            errorMessage = t('transfer.contractReverted') || 'Transaction was rejected by the contract. Please check your inputs and try again.'
+          }
+        }
+      }
+      
+      toast.error(errorMessage, { id: toastId, duration: 6000 })
     } finally {
       setIsSubmitting(false)
     }
