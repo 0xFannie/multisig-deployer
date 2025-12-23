@@ -4,7 +4,7 @@ import { useTranslation } from 'next-i18next'
 import { X, Send, Wallet, AlertCircle, Mail, CheckCircle2, ChevronDown, User, Loader, Search, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
 import MultiSigWalletABI from '../artifacts/contracts/MultiSigWallet.sol/MultiSigWallet.json'
-import { parseEther, formatEther, formatUnits, parseUnits, erc20Abi, encodeFunctionData } from 'viem'
+import { parseEther, formatEther, formatUnits, parseUnits, erc20Abi, encodeFunctionData, decodeErrorResult } from 'viem'
 import { SUPPORTED_NETWORKS } from './DeployedContractsList'
 import { getTokenAddress } from '../lib/tokenAddresses'
 
@@ -726,24 +726,39 @@ export function TransferModal({
         // 尝试多种方式提取 revert reason
         let revertReason = 'Unknown revert reason'
         
+        // 方法0: 尝试使用 decodeErrorResult 解析错误数据
+        try {
+          const errorData = simError?.cause?.data || simError?.data
+          if (errorData && typeof errorData === 'object' && 'data' in errorData) {
+            const decoded = decodeErrorResult({
+              abi: MultiSigWalletABI.abi,
+              data: errorData.data as `0x${string}`,
+            })
+            revertReason = decoded.errorName || decoded.args?.[0]?.toString() || 'Decoded contract error'
+            console.error('Decoded error:', decoded)
+          }
+        } catch (decodeError) {
+          console.error('Failed to decode error result:', decodeError)
+        }
+        
         // 方法1: 从 cause.data.args 提取（Solidity 自定义错误）
-        if (simError?.cause?.data?.args && simError.cause.data.args.length > 0) {
+        if (revertReason === 'Unknown revert reason' && simError?.cause?.data?.args && simError.cause.data.args.length > 0) {
           revertReason = String(simError.cause.data.args[0])
         }
         // 方法2: 从 cause.reason 提取
-        else if (simError?.cause?.reason) {
+        else if (revertReason === 'Unknown revert reason' && simError?.cause?.reason) {
           revertReason = String(simError.cause.reason)
         }
         // 方法3: 从 cause.message 提取
-        else if (simError?.cause?.message) {
+        else if (revertReason === 'Unknown revert reason' && simError?.cause?.message) {
           revertReason = String(simError.cause.message)
         }
         // 方法4: 从 shortMessage 提取
-        else if (simError?.shortMessage) {
+        else if (revertReason === 'Unknown revert reason' && simError?.shortMessage) {
           revertReason = simError.shortMessage
         }
         // 方法5: 从 message 提取
-        else if (simError?.message) {
+        else if (revertReason === 'Unknown revert reason' && simError?.message) {
           revertReason = simError.message
         }
         
