@@ -545,8 +545,9 @@ export function TransferModal({
         console.log('No expiration time set (expirationDays:', expirationDays, ')')
       }
 
-      // 验证调用者是否是 owner
+      // 验证调用者是否是 owner（使用多种方法验证）
       try {
+        // 方法1: 使用 isOwner mapping
         const isOwner = await publicClient!.readContract({
           address: contractAddress as `0x${string}`,
           abi: MultiSigWalletABI.abi,
@@ -554,16 +555,35 @@ export function TransferModal({
           args: [address as `0x${string}`],
         })
         
-        console.log('Owner check result:', { address, isOwner, contractAddress })
+        // 方法2: 获取所有 owners 列表并检查
+        const owners = await publicClient!.readContract({
+          address: contractAddress as `0x${string}`,
+          abi: MultiSigWalletABI.abi,
+          functionName: 'getOwners',
+        }) as string[]
         
-        if (!isOwner) {
-          throw new Error('You are not an owner of this multisig wallet')
+        const isOwnerInList = owners.some(owner => owner.toLowerCase() === address?.toLowerCase())
+        
+        console.log('Owner check result:', { 
+          address, 
+          isOwner, 
+          isOwnerInList,
+          ownersCount: owners.length,
+          contractAddress 
+        })
+        
+        if (!isOwner && !isOwnerInList) {
+          throw new Error(`You are not an owner of this multisig wallet. Your address: ${address}, Contract owners: ${owners.join(', ')}`)
+        }
+        
+        if (!isOwner && isOwnerInList) {
+          console.warn('isOwner mapping returned false but address is in owners list. This may indicate a contract state issue.')
         }
         
         console.log('Caller is owner, proceeding with transaction submission')
       } catch (error: any) {
         console.error('Owner check failed:', error)
-        if (error.message?.includes('not an owner')) {
+        if (error.message?.includes('not an owner') || error.message?.includes('not an owner of this multisig')) {
           throw error
         }
         // 如果读取失败，记录警告但继续尝试提交（可能是网络问题）
