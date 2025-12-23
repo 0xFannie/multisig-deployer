@@ -517,18 +517,32 @@ export function TransferModal({
       // 计算过期时间（如果设置了）
       let expirationTime = 0n // 0 表示永不过期
       if (expirationDays !== null && expirationDays > 0) {
-        // 获取当前区块时间戳（秒）
-        const currentBlockTimestamp = await publicClient!.getBlock().then(block => Number(block.timestamp))
-        const expirationTimestamp = currentBlockTimestamp + (expirationDays * 24 * 60 * 60)
-        expirationTime = BigInt(expirationTimestamp)
-        
-        console.log('Expiration time calculation:', {
-          currentBlockTimestamp,
-          expirationDays,
-          expirationTimestamp,
-          expirationTime: expirationTime.toString(),
-          expirationDate: new Date(expirationTimestamp * 1000).toISOString()
-        })
+        try {
+          // 获取当前区块时间戳（秒）
+          const block = await publicClient!.getBlock()
+          const currentBlockTimestamp = Number(block.timestamp)
+          const expirationTimestamp = currentBlockTimestamp + (expirationDays * 24 * 60 * 60)
+          expirationTime = BigInt(expirationTimestamp)
+          
+          console.log('Expiration time calculation:', {
+            currentBlockTimestamp,
+            expirationDays,
+            expirationTimestamp,
+            expirationTime: expirationTime.toString(),
+            expirationDate: new Date(expirationTimestamp * 1000).toISOString(),
+            currentDate: new Date(currentBlockTimestamp * 1000).toISOString()
+          })
+          
+          // 验证过期时间是否在未来
+          if (expirationTimestamp <= currentBlockTimestamp) {
+            throw new Error(`Calculated expiration time (${expirationTimestamp}) is not in the future. Current block timestamp: ${currentBlockTimestamp}`)
+          }
+        } catch (error: any) {
+          console.error('Failed to calculate expiration time:', error)
+          throw new Error(`Failed to calculate expiration time: ${error.message}`)
+        }
+      } else {
+        console.log('No expiration time set (expirationDays:', expirationDays, ')')
       }
 
       // 验证调用者是否是 owner
@@ -540,6 +554,8 @@ export function TransferModal({
           args: [address as `0x${string}`],
         })
         
+        console.log('Owner check result:', { address, isOwner, contractAddress })
+        
         if (!isOwner) {
           throw new Error('You are not an owner of this multisig wallet')
         }
@@ -550,7 +566,31 @@ export function TransferModal({
         if (error.message?.includes('not an owner')) {
           throw error
         }
-        // 如果读取失败，继续尝试提交（可能是网络问题）
+        // 如果读取失败，记录警告但继续尝试提交（可能是网络问题）
+        console.warn('Owner check failed but continuing (may be network issue):', error.message)
+      }
+      
+      // 验证合约余额是否足够（对于原生代币转账）
+      if (selectedAsset === 'native' && contractInfo) {
+        try {
+          const contractBalance = BigInt(contractInfo.balance)
+          const transferValue = parseEther(amount)
+          
+          console.log('Balance check:', {
+            contractBalance: contractBalance.toString(),
+            transferValue: transferValue.toString(),
+            sufficient: contractBalance >= transferValue
+          })
+          
+          if (contractBalance < transferValue) {
+            throw new Error(`Insufficient contract balance. Contract has ${formatEther(contractBalance)}, but trying to transfer ${amount}`)
+          }
+        } catch (error: any) {
+          console.error('Balance check failed:', error)
+          if (error.message?.includes('Insufficient')) {
+            throw error
+          }
+        }
       }
 
       console.log('Submitting transaction with args:', {
