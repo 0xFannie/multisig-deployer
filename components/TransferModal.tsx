@@ -666,6 +666,43 @@ export function TransferModal({
         throw new Error(`Failed to verify contract: ${error.message}`)
       }
       
+      // 验证合约是否支持 expirationTime 参数
+      // 通过检查合约的函数签名来验证
+      console.log('=== Verifying contract compatibility ===')
+      try {
+        // 尝试读取合约的 getTransaction 函数，检查是否返回 expirationTime
+        const testTxIndex = 0n
+        const txCount = await publicClient!.readContract({
+          address: contractAddress as `0x${string}`,
+          abi: MultiSigWalletABI.abi,
+          functionName: 'getTransactionCount',
+        })
+        console.log('Contract transaction count:', txCount.toString())
+        
+        if (txCount > 0n) {
+          const testTx = await publicClient!.readContract({
+            address: contractAddress as `0x${string}`,
+            abi: MultiSigWalletABI.abi,
+            functionName: 'getTransaction',
+            args: [testTxIndex],
+          })
+          console.log('Test transaction from contract:', testTx)
+          
+          // 检查返回的 transaction 是否有 expirationTime 字段
+          if (testTx && Array.isArray(testTx) && testTx.length >= 6) {
+            const expirationTimeFromContract = testTx[5]
+            console.log('Contract supports expirationTime:', expirationTimeFromContract !== undefined, 'Value:', expirationTimeFromContract?.toString())
+          } else {
+            console.warn('⚠️ Contract may not support expirationTime. Transaction structure:', testTx)
+          }
+        } else {
+          console.warn('⚠️ No transactions in contract, cannot verify expirationTime support')
+        }
+      } catch (verifyError: any) {
+        console.error('Contract compatibility check failed:', verifyError)
+        // 不阻止继续执行，只是记录警告
+      }
+
       // 调用合约的 submitTransaction
       // 使用 simulateContract 先模拟执行，获取更详细的错误信息
       console.log('=== Starting transaction simulation ===')
@@ -675,8 +712,15 @@ export function TransferModal({
         args: [toAddress, value.toString(), data, expirationTime.toString()],
         account: address,
         expirationTimeValue: expirationTime.toString(),
-        expirationTimeIsZero: expirationTime === 0n
+        expirationTimeIsZero: expirationTime === 0n,
+        expirationTimeType: typeof expirationTime,
+        expirationTimeIsBigInt: expirationTime instanceof BigInt || typeof expirationTime === 'bigint'
       })
+      
+      // 确保 expirationTime 是 BigInt
+      const expirationTimeBigInt = typeof expirationTime === 'bigint' ? expirationTime : BigInt(expirationTime.toString())
+      console.log('Expiration time as BigInt:', expirationTimeBigInt.toString())
+      
       try {
         const simulationResult = await publicClient!.simulateContract({
           address: contractAddress as `0x${string}`,
@@ -686,7 +730,7 @@ export function TransferModal({
             toAddress,
             value,
             data,
-            expirationTime,
+            expirationTimeBigInt,
           ],
           account: address as `0x${string}`,
         })
@@ -729,13 +773,80 @@ export function TransferModal({
         // 方法0: 尝试使用 decodeErrorResult 解析错误数据
         try {
           const errorData = simError?.cause?.data || simError?.data
-          if (errorData && typeof errorData === 'object' && 'data' in errorData) {
+          const rawData = simError?.cause?.raw || simError?.raw
+          
+          console.error('Error data for decoding:', { 
+            errorData, 
+            rawData,
+            hasErrorData: !!errorData,
+            hasRawData: !!rawData && rawData !== '0x' && rawData !== '0x0'
+          })
+          
+          // 如果 raw 是 "0x"，说明合约 revert 时没有返回错误数据
+          // 这通常意味着使用了 revert() 而不是 revert("message")
+          // 或者合约版本不匹配（部署的合约可能不支持 _expirationTime 参数）
+          if (rawData === '0x' || rawData === '0x0' || !rawData) {
+            console.error('⚠️ Contract reverted without error data (raw: "0x"). This usually means:')
+            console.error('1. Contract version mismatch (deployed contract may not support _expirationTime parameter)')
+            console.error('2. Contract used revert() instead of revert("message")')
+            console.error('3. Other validation failed silently')
+            
+            // 检查合约是否支持 expirationTime 参数
+            // 通过尝试读取现有交易来验证
+            try {
+              const txCount = await publicClient!.readContract({
+                address: contractAddress as `0x${string}`,
+                abi: MultiSigWalletABI.abi,
+                functionName: 'getTransactionCount',
+              })
+              
+              if (txCount > 0n) {
+                const testTx = await publicClient!.readContract({
+                  address: contractAddress as `0x${string}`,
+                  abi: MultiSigWalletABI.abi,
+                  functionName: 'getTransaction',
+                  args: [0n],
+                })
+                
+                // 检查返回的 transaction 是否有 expirationTime 字段（应该是第6个元素，索引5）
+                if (testTx && Array.isArray(testTx) && testTx.length >= 6) {
+                  const expirationTimeFromContract = testTx[5]
+                  console.error('Contract supports expirationTime:', expirationTimeFromContract !== undefined, 'Value:', expirationTimeFromContract?.toString())
+                  
+                  if (expirationTimeFromContract === undefined) {
+                    revertReason = 'Contract version mismatch: The deployed contract does not support expirationTime parameter. Please redeploy the contract with the latest version.'
+                  }
+                } else {
+                  console.error('⚠️ Contract transaction structure does not match expected format:', testTx)
+                  revertReason = 'Contract version mismatch: The deployed contract structure does not match the expected format. Please redeploy the contract with the latest version.'
+                }
+              } else {
+                console.error('⚠️ No transactions in contract, cannot verify expirationTime support')
+                revertReason = 'Contract version mismatch: Cannot verify if contract supports expirationTime. The deployed contract may not support the _expirationTime parameter. Please redeploy the contract with the latest version.'
+              }
+            } catch (checkError: any) {
+              console.error('Failed to check contract compatibility:', checkError)
+              revertReason = 'Contract version mismatch: Failed to verify contract compatibility. The deployed contract may not support the _expirationTime parameter. Please redeploy the contract with the latest version.'
+            }
+          } else if (errorData && typeof errorData === 'object' && 'data' in errorData && errorData.data) {
             const decoded = decodeErrorResult({
               abi: MultiSigWalletABI.abi,
               data: errorData.data as `0x${string}`,
             })
             revertReason = decoded.errorName || decoded.args?.[0]?.toString() || 'Decoded contract error'
             console.error('Decoded error:', decoded)
+          } else if (rawData && rawData !== '0x' && rawData !== '0x0') {
+            // 尝试直接解码 raw 数据
+            try {
+              const decoded = decodeErrorResult({
+                abi: MultiSigWalletABI.abi,
+                data: rawData as `0x${string}`,
+              })
+              revertReason = decoded.errorName || decoded.args?.[0]?.toString() || 'Decoded contract error'
+              console.error('Decoded error from raw:', decoded)
+            } catch (rawDecodeError) {
+              console.error('Failed to decode raw error data:', rawDecodeError)
+            }
           }
         } catch (decodeError) {
           console.error('Failed to decode error result:', decodeError)
