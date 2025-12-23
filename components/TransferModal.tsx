@@ -742,11 +742,28 @@ export function TransferModal({
         console.warn('Error:', simError4?.shortMessage || simError4?.message)
         
         // 回退到 3 参数版本
+        // 需要创建一个临时的 3 参数版本的 ABI，因为当前 ABI 只有 4 参数版本
         try {
           console.log('Trying 3-parameter submitTransaction (old version, expirationTime will be ignored)...')
+          
+          // 创建 3 参数版本的 ABI（旧版本合约）
+          const oldVersionABI = [
+            {
+              inputs: [
+                { internalType: 'address', name: '_to', type: 'address' },
+                { internalType: 'uint256', name: '_value', type: 'uint256' },
+                { internalType: 'bytes', name: '_data', type: 'bytes' },
+              ],
+              name: 'submitTransaction',
+              outputs: [],
+              stateMutability: 'nonpayable',
+              type: 'function',
+            },
+          ] as const
+          
           simulationResult = await publicClient!.simulateContract({
             address: contractAddress as `0x${string}`,
-            abi: MultiSigWalletABI.abi,
+            abi: oldVersionABI,
             functionName: 'submitTransaction',
             args: [toAddress, value, data],
             account: address as `0x${string}`,
@@ -774,9 +791,26 @@ export function TransferModal({
       
       console.log('Submitting with', submitArgs.length, 'parameters')
       
+      // 根据使用的参数数量选择对应的 ABI
+      const contractABI = use4Params
+        ? MultiSigWalletABI.abi
+        : [
+            {
+              inputs: [
+                { internalType: 'address', name: '_to', type: 'address' },
+                { internalType: 'uint256', name: '_value', type: 'uint256' },
+                { internalType: 'bytes', name: '_data', type: 'bytes' },
+              ],
+              name: 'submitTransaction',
+              outputs: [],
+              stateMutability: 'nonpayable',
+              type: 'function',
+            },
+          ] as const
+      
       const hash = await walletClient.writeContract({
         address: contractAddress as `0x${string}`,
-        abi: MultiSigWalletABI.abi,
+        abi: contractABI,
         functionName: 'submitTransaction',
         args: submitArgs as any,
         account: address as `0x${string}`,
