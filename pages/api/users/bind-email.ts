@@ -19,10 +19,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { userId, email } = req.body
+    const { userId, email, walletAddress } = req.body
 
-    if (!userId || !email) {
-      return res.status(400).json({ error: 'userId and email are required' })
+    // 如果提供了 walletAddress 但没有 userId，尝试查找或创建用户
+    let finalUserId = userId
+    if (!finalUserId && walletAddress) {
+      const client = supabaseAdmin || supabase
+      if (!client) {
+        return res.status(500).json({ error: 'Database not configured' })
+      }
+
+      // 查找用户
+      let { data: user, error: findError } = await client
+        .from('users')
+        .select('id')
+        .eq('wallet_address', walletAddress.toLowerCase())
+        .maybeSingle()
+
+      if (findError && findError.code !== 'PGRST116') {
+        console.error('Error finding user:', findError)
+        return res.status(500).json({ error: 'Database error' })
+      }
+
+      // 如果用户不存在，创建新用户
+      if (!user) {
+        const { data: newUser, error: createError } = await client
+          .from('users')
+          .insert([{
+            wallet_address: walletAddress.toLowerCase(),
+          }])
+          .select('id')
+          .single()
+
+        if (createError) {
+          console.error('Error creating user:', createError)
+          return res.status(500).json({ error: 'Failed to create user' })
+        }
+
+        user = newUser
+        console.log('Created new user for wallet:', walletAddress, 'userId:', user.id)
+      }
+
+      finalUserId = user.id
+    }
+
+    if (!finalUserId || !email) {
+      return res.status(400).json({ error: 'userId (or walletAddress) and email are required' })
     }
 
     // 验证邮箱格式
@@ -45,7 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('email', email.toLowerCase())
       .maybeSingle()
 
-    if (existing && existing.id !== userId) {
+    if (existing && existing.id !== finalUserId) {
       return res.status(400).json({ error: 'Email already in use' })
     }
 
@@ -54,7 +96,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: recentAttempts } = await client
       .from('activity_logs')
       .select('created_at')
-      .eq('user_id', userId)
+      .eq('user_id', finalUserId)
       .eq('action', 'verification_email_sent')
       .gte('created_at', oneMinuteAgo.toISOString())
 
@@ -77,11 +119,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await client
       .from('email_verifications')
       .delete()
-      .eq('user_id', userId)
+      .eq('user_id', finalUserId)
       .eq('email', email.toLowerCase())
 
     console.log('Saving verification code:', { 
-      userId, 
+      userId: finalUserId, 
       email: email.toLowerCase(), 
       code: normalizedCode, 
       codeLength: normalizedCode.length,
@@ -92,7 +134,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: insertedData, error: insertError } = await client
       .from('email_verifications')
       .insert([{
-        user_id: userId,
+        user_id: finalUserId,
         email: email.toLowerCase(),
         verification_code: normalizedCode, // 使用规范化后的验证码
         expires_at: expiresAt.toISOString(),
@@ -123,7 +165,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 记录活动日志
     try {
       await client.from('activity_logs').insert([{
-        user_id: userId,
+        user_id: finalUserId,
         action: 'verification_email_sent',
         metadata: {
           email: email.toLowerCase(),
@@ -139,7 +181,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({
       success: true,
       message: 'Verification code sent',
-      expiresIn: 600 // 10分钟，单位秒
+      expiresIn: 600, // 10分钟，单位秒
+      userId: finalUserId // 返回 userId，前端可以保存
     })
   } catch (error) {
     console.error('Bind email error:', error)

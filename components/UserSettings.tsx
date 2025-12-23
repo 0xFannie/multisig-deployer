@@ -127,13 +127,17 @@ export function UserSettings() {
             }
           } else {
             console.warn('User not found by wallet address:', data.error || data.message)
-            // 如果用户不存在，显示错误信息
+            // 如果用户不存在，这是正常情况（新钱包），不显示错误提示
+            // 用户可以通过部署合约或提交交易来自动创建账户
             if (data.error === 'User not found') {
-              console.warn('User needs to interact with the app first to create account')
-              toast.error(ready ? t('settings.userNotFound') || 'User not found. Please interact with the app first.' : '用户未找到，请先与应用交互')
+              console.log('User not found - this is normal for new wallets. User will be created when they interact with the app.')
+              // 不显示错误提示，因为这是正常情况
             } else if (data.error === 'Database connection not available') {
               console.error('Database connection not available')
               toast.error(ready ? t('settings.databaseError') || 'Database connection error' : '数据库连接错误')
+            } else {
+              // 其他错误才显示提示
+              toast.error(data.error || (ready ? t('settings.loadUserFailed') || 'Failed to load user information' : '加载用户信息失败'))
             }
           }
         } catch (error: any) {
@@ -147,12 +151,13 @@ export function UserSettings() {
         await loadUserInfo(savedUserId)
         await loadWhitelist(savedUserId)
       } else {
-        console.warn('User ID not found. User may need to interact with the app first.')
-        // 清除状态
+        console.log('User ID not found. This wallet address has not been used yet. User will be created automatically when they deploy a contract or submit a transaction.')
+        // 清除状态，显示空状态（未绑定邮箱）
         setUserId(null)
         setUserEmail(null)
         setEmailVerified(false)
         setWhitelist([])
+        setEmailInput('')
       }
       setLoading(false)
     }
@@ -549,7 +554,7 @@ export function UserSettings() {
                     e.preventDefault()
                     handleBindEmail()
                   }}
-                  disabled={loading || !userId || !emailInput.trim() || countdown > 0}
+                  disabled={loading || !emailInput.trim() || countdown > 0}
                   className="px-6 py-2.5 bg-primary-light hover:bg-primary-light/80 text-white rounded-lg transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading 
@@ -598,8 +603,8 @@ export function UserSettings() {
               )}
             </div>
             {!userId && (
-              <p className="text-yellow-400 text-sm mt-2">
-                {t('settings.userIdLoading') || 'Loading user information...'}
+              <p className="text-primary-gray text-sm mt-2">
+                {t('settings.newWalletHint') || 'This wallet address has not been used yet. You can bind an email to get started.'}
               </p>
             )}
           </div>

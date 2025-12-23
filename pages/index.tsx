@@ -224,47 +224,47 @@ export default function Home() {
                     <div className="flex flex-row md:flex-col gap-2 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 scrollbar-hide">
                       <button
                         onClick={() => setActiveTab('view')}
-                        className={`flex items-center gap-2 sm:gap-3 py-3 sm:py-4 px-4 sm:px-6 rounded-lg sm:rounded-xl font-semibold transition-all md:w-full whitespace-nowrap min-w-fit ${
+                        className={`flex items-center gap-2 sm:gap-3 py-3 sm:py-4 px-4 sm:px-6 rounded-lg sm:rounded-xl font-semibold transition-all md:w-full min-w-0 ${
                           activeTab === 'view'
                             ? 'bg-gradient-to-r from-primary-light to-primary-gray text-primary-black shadow-lg'
                             : 'text-primary-gray hover:text-white hover:bg-white/5'
                         }`}
                       >
                         <Eye className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                        <span className="text-sm sm:text-base">{t('tabs.view')}</span>
+                        <span className="text-sm sm:text-base break-words text-left">{t('tabs.view')}</span>
                       </button>
                       <button
                         onClick={() => setActiveTab('transactions')}
-                        className={`flex items-center gap-2 sm:gap-3 py-3 sm:py-4 px-4 sm:px-6 rounded-lg sm:rounded-xl font-semibold transition-all md:w-full whitespace-nowrap min-w-fit ${
+                        className={`flex items-center gap-2 sm:gap-3 py-3 sm:py-4 px-4 sm:px-6 rounded-lg sm:rounded-xl font-semibold transition-all md:w-full min-w-0 ${
                           activeTab === 'transactions'
                             ? 'bg-gradient-to-r from-primary-light to-primary-gray text-primary-black shadow-lg'
                             : 'text-primary-gray hover:text-white hover:bg-white/5'
                         }`}
                       >
                         <Send className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                        <span className="text-sm sm:text-base">{t('tabs.transactions')}</span>
+                        <span className="text-sm sm:text-base break-words text-left">{t('tabs.transactions')}</span>
                       </button>
                       <button
                         onClick={() => setActiveTab('deploy')}
-                        className={`flex items-center gap-2 sm:gap-3 py-3 sm:py-4 px-4 sm:px-6 rounded-lg sm:rounded-xl font-semibold transition-all md:w-full whitespace-nowrap min-w-fit ${
+                        className={`flex items-center gap-2 sm:gap-3 py-3 sm:py-4 px-4 sm:px-6 rounded-lg sm:rounded-xl font-semibold transition-all md:w-full min-w-0 ${
                           activeTab === 'deploy'
                             ? 'bg-gradient-to-r from-primary-light to-primary-gray text-primary-black shadow-lg'
                             : 'text-primary-gray hover:text-white hover:bg-white/5'
                         }`}
                       >
                         <Plus className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                        <span className="text-sm sm:text-base">{t('tabs.deploy')}</span>
+                        <span className="text-sm sm:text-base break-words text-left">{t('tabs.deploy')}</span>
                       </button>
                       <button
                         onClick={() => setActiveTab('settings')}
-                        className={`flex items-center gap-2 sm:gap-3 py-3 sm:py-4 px-4 sm:px-6 rounded-lg sm:rounded-xl font-semibold transition-all md:w-full whitespace-nowrap min-w-fit ${
+                        className={`flex items-center gap-2 sm:gap-3 py-3 sm:py-4 px-4 sm:px-6 rounded-lg sm:rounded-xl font-semibold transition-all md:w-full min-w-0 ${
                           activeTab === 'settings'
                             ? 'bg-gradient-to-r from-primary-light to-primary-gray text-primary-black shadow-lg'
                             : 'text-primary-gray hover:text-white hover:bg-white/5'
                         }`}
                       >
                         <Settings className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                        <span className="text-sm sm:text-base">{t('tabs.settings')}</span>
+                        <span className="text-sm sm:text-base break-words text-left">{t('tabs.settings')}</span>
                       </button>
                     </div>
                   </div>
