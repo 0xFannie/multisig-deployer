@@ -598,10 +598,22 @@ export function TransferModal({
         value: value.toString(),
         data: data,
         expirationTime: expirationTime.toString(),
+        expirationDays: expirationDays, // 添加这个以便调试
         recipient: recipient,
         assetType: selectedAsset,
-        sender: address
+        sender: address,
+        contractAddress: contractAddress,
+        contractChainId: contractChainId
       })
+      
+      // 最终验证：确保所有必需参数都存在
+      if (!toAddress || !contractAddress || !address) {
+        throw new Error('Missing required parameters for transaction submission')
+      }
+      
+      if (selectedAsset === 'native' && value <= 0n) {
+        throw new Error('Invalid transfer value: must be greater than 0')
+      }
 
       // 调用合约的 submitTransaction
       const hash = await walletClient.writeContract({
